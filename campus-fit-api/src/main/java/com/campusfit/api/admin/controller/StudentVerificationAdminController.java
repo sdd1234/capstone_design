@@ -1,32 +1,29 @@
 package com.campusfit.api.admin.controller;
 
+import com.campusfit.api.admin.dto.VerificationReviewRequest;
+import com.campusfit.api.admin.service.StudentVerificationService;
 import com.campusfit.api.common.dto.ApiResponse;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/admin/student-verifications")
-@Validated
+@RequiredArgsConstructor
 public class StudentVerificationAdminController {
 
-    @PatchMapping("/{verificationId}")
-    public ResponseEntity<ApiResponse<String>> updateVerification(
-        @PathVariable Long verificationId,
-        @RequestBody UpdateStudentVerificationRequest request
-    ) {
-        String msg = "verificationId=" + verificationId + ", status=" + request.status();
-        return ResponseEntity.ok(ApiResponse.ok(msg));
-    }
+    private final StudentVerificationService verificationService;
 
-    public record UpdateStudentVerificationRequest(
-        @NotBlank String status,
-        String rejectReason
-    ) {
+    @PatchMapping("/{verificationId}")
+    public ResponseEntity<ApiResponse<Void>> review(
+            @PathVariable Long verificationId,
+            @Valid @RequestBody VerificationReviewRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long adminId = Long.valueOf(userDetails.getUsername());
+        verificationService.review(verificationId, adminId, request);
+        return ResponseEntity.ok(ApiResponse.ok(null));
     }
 }

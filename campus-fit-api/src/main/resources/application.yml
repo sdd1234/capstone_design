@@ -4,18 +4,41 @@ server:
 spring:
   application:
     name: campus-fit-api
+
+  # ── H2 인메모리 DB (개발용) ──────────────────────────────────────
   datasource:
     url: jdbc:h2:mem:campusfit;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
     username: sa
     password:
+
+  # ── MySQL 전환 시 아래 주석 해제 + 위 h2 설정 주석 처리 ─────────
+  # datasource:
+  #   url: jdbc:mysql://localhost:3306/campusfit?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+  #   driver-class-name: com.mysql.cj.jdbc.Driver
+  #   username: campus_user
+  #   password: campus_pass
+
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop # H2 개발: create-drop / MySQL 운영: validate
     show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+    open-in-view: false
+
   h2:
     console:
       enabled: true
       path: /h2-console
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 20MB
 
 app:
   cors:
@@ -23,6 +46,8 @@ app:
       - http://localhost:5173
   jwt:
     issuer: campus-fit
-    secret: change-this-in-real-env-change-this-in-real-env
+    secret: "campus-fit-jwt-secret-key-minimum-256-bits-long-please-change"
     access-token-minutes: 30
     refresh-token-days: 14
+  file:
+    upload-dir: uploads/

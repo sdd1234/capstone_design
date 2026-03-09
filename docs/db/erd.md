@@ -1,5 +1,7 @@
 # Campus Fit ERD
 
+> 실제 구현된 Hibernate Entity 기준 (2026-03-09)
+
 ```mermaid
 erDiagram
 
@@ -7,242 +9,292 @@ erDiagram
     %% 1. 회원 / 인증
     %% ──────────────────────────────────────────
     universities {
-        BIGINT      id               PK
-        VARCHAR(100) name
-        VARCHAR(200) domain
-        TIMESTAMP   created_at
+        bigint id PK
+        varchar name
+        varchar domain
+        timestamp created_at
     }
 
     users {
-        BIGINT      id               PK
-        BIGINT      university_id    FK
-        VARCHAR(254) email
-        VARCHAR(255) password_hash
-        VARCHAR(20)  name
-        VARCHAR(30)  status          "PENDING_VERIFICATION | ACTIVE | REJECTED"
-        VARCHAR(20)  role            "USER | ADMIN"
-        BOOLEAN     service_agree
-        BOOLEAN     privacy_agree
-        BOOLEAN     marketing_agree
-        TIMESTAMP   created_at
-        TIMESTAMP   updated_at
+        bigint   id              PK
+        varchar  email           "UNIQUE"
+        varchar  password_hash
+        varchar  name
+        varchar  status          "PENDING_VERIFICATION | ACTIVE | REJECTED"
+        varchar  role            "USER | ADMIN"
+        tinyint  marketing_agree
+        timestamp created_at
+        timestamp updated_at
     }
 
     files {
-        BIGINT      id               PK
-        BIGINT      uploader_id      FK
-        VARCHAR(255) original_name
-        VARCHAR(500) stored_path
-        VARCHAR(100) mime_type
-        BIGINT      size_bytes
-        VARCHAR(30)  purpose         "STUDENT_VERIFICATION"
-        TIMESTAMP   created_at
+        bigint   id            PK
+        bigint   uploaded_by   FK
+        varchar  original_name
+        varchar  stored_path
+        varchar  mime_type
+        bigint   size
+        varchar  purpose       "STUDENT_VERIFICATION"
+        timestamp created_at
     }
 
     student_verifications {
-        BIGINT      id               PK
-        BIGINT      user_id          FK
-        BIGINT      file_id          FK
-        VARCHAR(40)  verification_type "STUDENT_ID_CARD | ENROLLMENT_CERTIFICATE | PORTAL_SCREENSHOT"
-        VARCHAR(30)  status          "PENDING | APPROVED | REJECTED"
-        TEXT        note
-        TEXT        reject_reason
-        TIMESTAMP   reviewed_at
-        TIMESTAMP   created_at
-        TIMESTAMP   updated_at
+        bigint   id                PK
+        bigint   user_id           FK
+        bigint   file_id           FK
+        bigint   reviewed_by       FK
+        varchar  verification_type
+        varchar  status            "PENDING | APPROVED | REJECTED"
+        varchar  note
+        varchar  reject_reason
+        timestamp created_at
+        timestamp updated_at
     }
 
     %% ──────────────────────────────────────────
     %% 2. 학사 데이터
     %% ──────────────────────────────────────────
-    departments {
-        BIGINT      id               PK
-        BIGINT      university_id    FK
-        VARCHAR(100) name
-    }
-
     courses {
-        BIGINT      id               PK
-        BIGINT      university_id    FK
-        BIGINT      department_id    FK
-        VARCHAR(200) name
-        INT         default_credits
-        VARCHAR(20)  category
+        bigint   id            PK
+        bigint   university_id FK
+        bigint   dept_id       "비FK (departments 테이블 미구현)"
+        varchar  name
+        int      credits
+        varchar  category
+        timestamp created_at
     }
 
     course_prerequisites {
-        BIGINT      course_id        PK,FK
-        BIGINT      prerequisite_id  PK,FK
+        bigint id              PK
+        bigint course_id       FK
+        bigint prerequisite_course_id FK
     }
 
     lectures {
-        BIGINT      id               PK
-        BIGINT      course_id        FK
-        BIGINT      university_id    FK
-        BIGINT      department_id    FK
-        INT         year
-        VARCHAR(10)  term_season     "SPRING | SUMMER | FALL | WINTER"
-        VARCHAR(100) professor
-        INT         credits
-        VARCHAR(20)  category
-        BOOLEAN     is_remote
-        INT         capacity
-        INT         enrolled
+        bigint   id            PK
+        bigint   course_id     FK
+        bigint   university_id FK
+        bigint   dept_id       "비FK"
+        int      academic_year
+        varchar  term_season   "SPRING | SUMMER | FALL | WINTER"
+        varchar  professor
+        varchar  room
+        tinyint  is_remote
+        timestamp created_at
     }
 
     lecture_schedules {
-        BIGINT      id               PK
-        BIGINT      lecture_id       FK
-        VARCHAR(5)   day_of_week     "MON|TUE|WED|THU|FRI|SAT|SUN"
-        TIME        start_time
-        TIME        end_time
-        VARCHAR(100) room
+        bigint  id          PK
+        bigint  lecture_id  FK
+        varchar day_of_week "MON|TUE|WED|THU|FRI|SAT|SUN"
+        time    start_time
+        time    end_time
     }
 
     academic_calendar_events {
-        BIGINT      id               PK
-        BIGINT      university_id    FK
-        VARCHAR(200) title
-        DATE        start_date
-        DATE        end_date
-        VARCHAR(30)  category        "EXAM | VACATION | ENROLLMENT | etc"
-        INT         year
-        TIMESTAMP   created_at
+        bigint   id            PK
+        bigint   university_id FK
+        varchar  title
+        date     start_date
+        date     end_date
+        varchar  category
+        int      academic_year
+        timestamp created_at
     }
 
     %% ──────────────────────────────────────────
     %% 3. 시간표 선호 설정
     %% ──────────────────────────────────────────
     timetable_preferences {
-        BIGINT      id               PK
-        BIGINT      user_id          FK
-        BIGINT      university_id    FK
-        INT         year
-        VARCHAR(10)  term_season
-        INT         min_credits
-        INT         max_credits
-        INT         target_credits
-        BOOLEAN     exclude_morning_classes
-        INT         allow_gaps_minutes
-        INT         max_days_per_week
-        TIMESTAMP   created_at
-        TIMESTAMP   updated_at
+        bigint   id           PK
+        bigint   user_id      FK
+        int      academic_year
+        varchar  term_season
+        timestamp created_at
+        timestamp updated_at
     }
 
-    timetable_preference_days {
-        BIGINT      id               PK
-        BIGINT      preference_id    FK
-        VARCHAR(5)   day_of_week
-        VARCHAR(10)  day_type        "PREFERRED | AVOID"
-    }
-
-    timetable_preference_time_ranges {
-        BIGINT      id               PK
-        BIGINT      preference_id    FK
-        TIME        start_time
-        TIME        end_time
-        VARCHAR(10)  range_type      "PREFERRED | AVOID"
+    preferred_time_ranges {
+        bigint  id            PK
+        bigint  preference_id FK
+        varchar type          "PREFERRED | AVOID"
+        varchar day_of_week
+        time    start_time
+        time    end_time
     }
 
     desired_courses {
-        BIGINT      id               PK
-        BIGINT      preference_id    FK
-        BIGINT      course_id        FK "nullable"
-        TEXT        raw_text
-        INT         priority         "1~5"
+        bigint  id            PK
+        bigint  preference_id FK
+        bigint  course_id
+        varchar raw_text
+        int     priority
+    }
+
+    credit_policies {
+        bigint id            PK
+        bigint preference_id FK "UNIQUE"
+        int    min_credits
+        int    max_credits
+        int    target_credits
+    }
+
+    preference_options {
+        bigint   id                  PK
+        bigint   preference_id       FK "UNIQUE"
+        tinyint  exclude_morning
+        int      allow_gaps_minutes
+        int      max_days_per_week
     }
 
     %% ──────────────────────────────────────────
     %% 4. AI 시간표 추천
     %% ──────────────────────────────────────────
-    ai_recommendations {
-        BIGINT      id               PK
-        BIGINT      user_id          FK
-        INT         year
-        VARCHAR(10)  term_season
-        BIGINT      major_id         FK "nullable"
-        INT         grade
-        VARCHAR(20)  status          "PENDING | DONE | FAILED"
-        JSONB       request_snapshot
-        TIMESTAMP   created_at
+    ai_timetable_recommendations {
+        bigint    id                  PK
+        bigint    user_id             FK
+        int       academic_year
+        varchar   term_season
+        text      request_params_json
+        timestamp created_at
     }
 
-    ai_recommendation_candidates {
-        BIGINT      id               PK
-        BIGINT      recommendation_id FK
-        INT         rank
-        INT         total_credits
-        FLOAT       score
+    recommendation_candidates {
+        bigint id                PK
+        bigint recommendation_id FK
+        int    rank
+        int    total_credits
     }
 
-    ai_recommendation_candidate_items {
-        BIGINT      id               PK
-        BIGINT      candidate_id     FK
-        BIGINT      lecture_id       FK
+    recommendation_candidate_lectures {
+        bigint candidate_id FK
+        bigint lecture_id   FK
     }
 
     %% ──────────────────────────────────────────
-    %% 5. 시간표 (확정)
+    %% 5. 시간표 확정
     %% ──────────────────────────────────────────
     timetables {
-        BIGINT      id               PK
-        BIGINT      user_id          FK
-        BIGINT      source_recommendation_id FK "nullable"
-        INT         year
-        VARCHAR(10)  term_season
-        VARCHAR(100) title
-        VARCHAR(20)  status          "DRAFT | CONFIRMED"
-        TIMESTAMP   created_at
-        TIMESTAMP   updated_at
+        bigint    id                       PK
+        bigint    user_id                  FK
+        bigint    source_recommendation_id
+        int       academic_year
+        varchar   term_season
+        varchar   title
+        varchar   status                   "DRAFT | CONFIRMED"
+        timestamp created_at
+        timestamp updated_at
     }
 
     timetable_items {
-        BIGINT      id               PK
-        BIGINT      timetable_id     FK
-        BIGINT      lecture_id       FK
+        bigint id           PK
+        bigint timetable_id FK
+        bigint lecture_id   FK
     }
 
     %% ──────────────────────────────────────────
-    %% 6. 캘린더 / 일정 / 투두
+    %% 6. 캘린더
     %% ──────────────────────────────────────────
     events {
-        BIGINT      id               PK
-        BIGINT      user_id          FK
-        VARCHAR(200) title
-        VARCHAR(20)  category        "CLASS|ASSIGNMENT|EXAM|PERSONAL|SCHOOL|PROJECT"
-        TIMESTAMP   start_at
-        TIMESTAMP   end_at
-        BOOLEAN     all_day
-        TEXT        description
-        TIMESTAMP   remind_at
-        VARCHAR(7)   color           "#RRGGBB"
-        TIMESTAMP   created_at
-        TIMESTAMP   updated_at
+        bigint    id          PK
+        bigint    user_id     FK
+        varchar   title
+        varchar   category    "CLASS|ASSIGNMENT|EXAM|PERSONAL|SCHOOL|PROJECT"
+        timestamp start_at
+        timestamp end_at
+        tinyint   all_day
+        varchar   description
+        timestamp remind_at
+        varchar   color
+        timestamp created_at
+        timestamp updated_at
     }
 
     tasks {
-        BIGINT      id               PK
-        BIGINT      user_id          FK
-        BIGINT      linked_event_id  FK "nullable"
-        VARCHAR(200) title
-        VARCHAR(20)  status          "TODO | IN_PROGRESS | DONE"
-        DATE        scheduled_date
-        TIMESTAMP   due_at
-        VARCHAR(30)  category
-        TIMESTAMP   remind_at
-        TIMESTAMP   created_at
-        TIMESTAMP   updated_at
+        bigint    id              PK
+        bigint    user_id         FK
+        bigint    linked_event_id FK
+        varchar   title
+        varchar   status          "TODO | IN_PROGRESS | DONE"
+        date      scheduled_date
+        timestamp due_at
+        varchar   category
+        timestamp remind_at
+        timestamp created_at
+        timestamp updated_at
     }
 
     %% ──────────────────────────────────────────
     %% 관계 정의
     %% ──────────────────────────────────────────
 
-    universities ||--o{ users                               : "소속"
-    universities ||--o{ departments                         : "보유"
-    universities ||--o{ lectures                            : "제공"
-    universities ||--o{ academic_calendar_events            : "일정"
-    universities ||--o{ courses                             : "과목"
+    users ||--o{ files                          : "uploads"
+    users ||--o{ student_verifications          : "submits"
+    users ||--o{ student_verifications          : "reviews"
+    files ||--o{ student_verifications          : "used_in"
+
+    universities ||--o{ courses                 : "has"
+    universities ||--o{ lectures                : "has"
+    universities ||--o{ academic_calendar_events : "schedules"
+
+    courses ||--o{ course_prerequisites         : "requires"
+    courses ||--o{ lectures                     : "has_section"
+
+    lectures ||--o{ lecture_schedules           : "scheduled_at"
+    lectures }o--o{ recommendation_candidates   : "candidate_lectures"
+    lectures ||--o{ timetable_items             : "included_in"
+
+    users ||--o{ timetable_preferences          : "sets"
+    timetable_preferences ||--o{ preferred_time_ranges : "has"
+    timetable_preferences ||--o{ desired_courses       : "wants"
+    timetable_preferences ||--o| credit_policies       : "has"
+    timetable_preferences ||--o| preference_options    : "has"
+
+    users ||--o{ ai_timetable_recommendations   : "requests"
+    ai_timetable_recommendations ||--o{ recommendation_candidates : "generates"
+    recommendation_candidates }o--o{ lectures   : "contains"
+
+    users ||--o{ timetables                     : "owns"
+    timetables ||--o{ timetable_items           : "has"
+
+    users ||--o{ events                         : "creates"
+    users ||--o{ tasks                          : "creates"
+    events ||--o{ tasks                         : "linked_to"
+```
+
+## 테이블 목록 (21개)
+
+| #   | 테이블                              | 설명             |
+| --- | ----------------------------------- | ---------------- |
+| 1   | `universities`                      | 대학교           |
+| 2   | `users`                             | 회원             |
+| 3   | `files`                             | 업로드 파일      |
+| 4   | `student_verifications`             | 재학생 인증      |
+| 5   | `courses`                           | 과목             |
+| 6   | `course_prerequisites`              | 선수과목         |
+| 7   | `lectures`                          | 강의 분반        |
+| 8   | `lecture_schedules`                 | 강의 시간 슬롯   |
+| 9   | `academic_calendar_events`          | 학사 일정        |
+| 10  | `timetable_preferences`             | 시간표 선호 설정 |
+| 11  | `preferred_time_ranges`             | 선호/기피 시간대 |
+| 12  | `desired_courses`                   | 희망 수강 과목   |
+| 13  | `credit_policies`                   | 학점 정책        |
+| 14  | `preference_options`                | 기타 선호 옵션   |
+| 15  | `ai_timetable_recommendations`      | AI 추천 요청     |
+| 16  | `recommendation_candidates`         | 추천 후보 시간표 |
+| 17  | `recommendation_candidate_lectures` | 후보-강의 N:M    |
+| 18  | `timetables`                        | 확정 시간표      |
+| 19  | `timetable_items`                   | 시간표-강의 N:M  |
+| 20  | `events`                            | 개인 일정        |
+| 21  | `tasks`                             | 할일(Todo)       |
+
+## 향후 추가 예정
+
+| 항목                                  | 설명                                  |
+| ------------------------------------- | ------------------------------------- |
+| `departments` 테이블                  | 현재 `dept_id`는 plain Long (FK 없음) |
+| `users.university_id`                 | 소속 대학 연결 미구현                 |
+| `users.service_agree / privacy_agree` | 필수 약관 동의 컬럼 미구현            |
 
     users ||--o| student_verifications                      : "제출"
     users ||--o{ files                                      : "업로드"
@@ -277,4 +329,7 @@ erDiagram
     timetables ||--o{ timetable_items                       : "포함강의"
 
     events ||--o{ tasks                                     : "연결투두"
+
+```
+
 ```

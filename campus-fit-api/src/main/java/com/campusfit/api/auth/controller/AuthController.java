@@ -1,45 +1,42 @@
 package com.campusfit.api.auth.controller;
 
-import com.campusfit.api.auth.dto.LoginRequest;
-import com.campusfit.api.auth.dto.SignupRequest;
+import com.campusfit.api.auth.dto.*;
+import com.campusfit.api.auth.service.AuthService;
 import com.campusfit.api.common.dto.ApiResponse;
 import jakarta.validation.Valid;
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
-    @PostMapping(value = "/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<Map<String, Object>>> signup(
-        @Valid @RequestPart("payload") SignupRequest request,
-        @RequestPart("verificationFile") MultipartFile verificationFile
-    ) {
-        Map<String, Object> data = Map.of(
-            "email", request.email(),
-            "status", "PENDING_VERIFICATION",
-            "verificationStatus", "PENDING",
-            "fileName", verificationFile.getOriginalFilename()
-        );
+    private final AuthService authService;
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(data));
+    @PostMapping(value = "/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<SignupResponse>> signup(
+            @RequestParam String email,
+            @RequestParam String password,
+            @RequestParam String name,
+            @RequestParam Boolean serviceAgree,
+            @RequestParam Boolean privacyAgree,
+            @RequestParam(required = false, defaultValue = "false") Boolean marketingAgree,
+            @RequestParam(required = false, defaultValue = "STUDENT_ID") String verificationType,
+            @RequestParam(required = false) String note,
+            @RequestPart(value = "verificationFile", required = false) MultipartFile verificationFile) {
+        SignupRequest request = new SignupRequest(email, password, name, serviceAgree, privacyAgree, marketingAgree,
+                verificationType, note);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(authService.signup(request, verificationFile)));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<Map<String, String>>> login(@Valid @RequestBody LoginRequest request) {
-        Map<String, String> tokens = Map.of(
-            "accessToken", "mock-access-token",
-            "refreshToken", "mock-refresh-token"
-        );
-        return ResponseEntity.ok(ApiResponse.ok(tokens));
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(authService.login(request)));
     }
 }
