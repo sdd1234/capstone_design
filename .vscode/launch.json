@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Debug Campus Fit API",
+      "request": "launch",
+      "mainClass": "com.campusfit.api.CampusFitApiApplication",
+      "projectName": "campus-fit-api"
+    },
+    {
+      "type": "pwa-chrome",
+      "name": "Debug Campus Fit Web",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/campus-fit-web/src"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug Full Stack",
+      "configurations": ["Debug Campus Fit API", "Debug Campus Fit Web"]
+    }
+  ]
+}

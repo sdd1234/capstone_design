@@ -1,0 +1,28 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: campus-fit-api
+  datasource:
+    url: jdbc:h2:mem:campusfit;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:5173
+  jwt:
+    issuer: campus-fit
+    secret: change-this-in-real-env-change-this-in-real-env
+    access-token-minutes: 30
+    refresh-token-days: 14

@@ -1,0 +1,46 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "backend: run",
+      "type": "shell",
+      "command": "mvn",
+      "args": ["spring-boot:run"],
+      "options": {
+        "cwd": "${workspaceFolder}/campus-fit-api"
+      },
+      "isBackground": true,
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "frontend: install",
+      "type": "shell",
+      "command": "npm.cmd",
+      "args": ["install"],
+      "options": {
+        "cwd": "${workspaceFolder}/campus-fit-web"
+      },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "frontend: dev",
+      "type": "shell",
+      "command": "npm.cmd",
+      "args": ["run", "dev"],
+      "options": {
+        "cwd": "${workspaceFolder}/campus-fit-web"
+      },
+      "isBackground": true,
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "dev: full stack",
+      "dependsOn": ["frontend: install", "backend: run", "frontend: dev"],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    }
+  ]
+}
