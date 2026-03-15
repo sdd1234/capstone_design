@@ -17,6 +17,10 @@ public record LectureResponse(
         String professor,
         String room,
         Boolean isRemote,
+        String lectureNumber,
+        String area,
+        String campus,
+        String category,
         List<ScheduleDto> schedules) {
     public record ScheduleDto(DayOfWeekEnum dayOfWeek, LocalTime startTime, LocalTime endTime) {
         public static ScheduleDto from(LectureSchedule s) {
@@ -35,6 +39,10 @@ public record LectureResponse(
                 l.getProfessor(),
                 l.getRoom(),
                 l.getIsRemote(),
+                l.getLectureNumber(),
+                l.getArea(),
+                l.getCampus(),
+                l.getCourse().getCategory(),
                 l.getSchedules().stream().map(ScheduleDto::from).toList());
     }
 }

@@ -5,9 +5,9 @@ spring:
   application:
     name: campus-fit-api
 
-  # ── H2 인메모리 DB (개발용) ──────────────────────────────────────
+  # ── H2 파일 기반 DB (데이터 영구 보존) ──────────────────────────
   datasource:
-    url: jdbc:h2:mem:campusfit;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2:file:./h2data/campusfit;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;NON_KEYWORDS=VALUE
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -20,12 +20,14 @@ spring:
   #   password: campus_pass
 
   jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
-      ddl-auto: create-drop # H2 개발: create-drop / MySQL 운영: validate
-    show-sql: true
+      ddl-auto: update # 파일 H2: 테이블 없으면 생성, 있으면 유지 (데이터 보존)
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
+        globally_quoted_identifiers: true
 
     open-in-view: false
 
@@ -51,3 +53,5 @@ app:
     refresh-token-days: 14
   file:
     upload-dir: uploads/
+  excel:
+    import-dir: ../excel # 프로젝트 루트의 excel/ 폴더 (mvn 실행 디렉터리 기준)

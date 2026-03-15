@@ -5,7 +5,10 @@ import com.campusfit.api.academic.dto.PrerequisiteResponse;
 import java.util.List;
 
 public interface LectureService {
-    List<LectureResponse> search(Long universityId, Integer year, String termSeason, String keyword);
+    List<LectureResponse> search(Long universityId, Integer year, String termSeason, String keyword, String category,
+            String area);
+
+    LectureResponse getById(Long lectureId);
 
     List<PrerequisiteResponse> getPrerequisites(Long courseId);
 }

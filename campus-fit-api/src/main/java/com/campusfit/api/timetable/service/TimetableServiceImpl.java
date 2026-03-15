@@ -7,6 +7,8 @@ import com.campusfit.api.timetable.dto.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -32,9 +34,12 @@ public class TimetableServiceImpl implements TimetableService {
                 .build();
 
         if (req.lectureIds() != null) {
+            List<Lecture> added = new ArrayList<>();
             req.lectureIds().forEach(lid -> {
                 Lecture lecture = lectureRepository.findById(lid)
                         .orElseThrow(() -> BusinessException.notFound("강의를 찾을 수 없습니다: " + lid));
+                checkScheduleConflicts(added, lecture);
+                added.add(lecture);
                 timetable.getItems().add(TimetableItem.builder()
                         .timetable(timetable)
                         .lecture(lecture)
@@ -56,9 +61,12 @@ public class TimetableServiceImpl implements TimetableService {
 
         if (req.lectureIds() != null) {
             t.getItems().clear();
+            List<Lecture> added = new ArrayList<>();
             req.lectureIds().forEach(lid -> {
                 Lecture lecture = lectureRepository.findById(lid)
                         .orElseThrow(() -> BusinessException.notFound("강의를 찾을 수 없습니다: " + lid));
+                checkScheduleConflicts(added, lecture);
+                added.add(lecture);
                 t.getItems().add(TimetableItem.builder().timetable(t).lecture(lecture).build());
             });
         }
@@ -91,5 +99,27 @@ public class TimetableServiceImpl implements TimetableService {
             throw BusinessException.forbidden("접근 권한이 없습니다.");
         }
         return t;
+    }
+
+    /** 기존 강의 목록에 추가 강의를 넣었을 때 시간 충돌 여부 확인 */
+    private void checkScheduleConflicts(List<Lecture> existingLectures, Lecture newLecture) {
+        List<LectureSchedule> newSchedules = newLecture.getSchedules();
+        for (Lecture existing : existingLectures) {
+            for (LectureSchedule es : existing.getSchedules()) {
+                for (LectureSchedule ns : newSchedules) {
+                    if (es.getDayOfWeek() == ns.getDayOfWeek()
+                            && isOverlapping(es.getStartTime(), es.getEndTime(), ns.getStartTime(), ns.getEndTime())) {
+                        throw BusinessException.conflict(
+                                "강의 시간이 충돌합니다: [" + existing.getCourse().getName() + "] vs ["
+                                        + newLecture.getCourse().getName() + "] " + es.getDayOfWeek() + " "
+                                        + es.getStartTime() + "~" + es.getEndTime());
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean isOverlapping(LocalTime s1, LocalTime e1, LocalTime s2, LocalTime e2) {
+        return s1.isBefore(e2) && s2.isBefore(e1);
     }
 }

@@ -4,6 +4,17 @@
 --  MySQL 전환 시 이 스크립트를 사용
 -- ============================================================
 
+CREATE TABLE IF NOT EXISTS lecture_import_logs (
+    id             BIGINT       NOT NULL AUTO_INCREMENT,
+    university_id  BIGINT,
+    year           INT          NOT NULL,
+    term_season    VARCHAR(10)  NOT NULL,
+    file_name      VARCHAR(255) NOT NULL,
+    imported_count INT          NOT NULL DEFAULT 0,
+    imported_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS users (
     id             BIGINT       NOT NULL AUTO_INCREMENT,
     email          VARCHAR(254) NOT NULL,
@@ -151,11 +162,14 @@ CREATE TABLE IF NOT EXISTS lectures (
     university_id BIGINT,
     year          INT         NOT NULL,
     term_season   VARCHAR(10) NOT NULL,
-    professor     VARCHAR(100),
-    room          VARCHAR(100),
-    is_remote     TINYINT(1)  NOT NULL DEFAULT 0,
-    dept_id       BIGINT,
-    created_at    DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    professor      VARCHAR(100),
+    room           VARCHAR(100),
+    is_remote      TINYINT(1)  NOT NULL DEFAULT 0,
+    dept_id        BIGINT,
+    lecture_number VARCHAR(30),
+    area           VARCHAR(100),
+    campus         VARCHAR(50),
+    created_at     DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     CONSTRAINT fk_lec_course FOREIGN KEY (course_id)     REFERENCES courses (id),
     CONSTRAINT fk_lec_uni    FOREIGN KEY (university_id) REFERENCES universities (id) ON DELETE SET NULL

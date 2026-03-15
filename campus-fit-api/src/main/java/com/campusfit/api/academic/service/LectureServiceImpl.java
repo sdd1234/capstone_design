@@ -5,6 +5,7 @@ import com.campusfit.api.academic.dto.PrerequisiteResponse;
 import com.campusfit.api.common.enums.TermSeason;
 import com.campusfit.api.common.exception.BusinessException;
 import com.campusfit.api.domain.Course;
+import com.campusfit.api.domain.Lecture;
 import com.campusfit.api.repository.CourseRepository;
 import com.campusfit.api.repository.LectureRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,10 +22,18 @@ public class LectureServiceImpl implements LectureService {
     private final CourseRepository courseRepository;
 
     @Override
-    public List<LectureResponse> search(Long universityId, Integer year, String termSeason, String keyword) {
+    public List<LectureResponse> search(Long universityId, Integer year, String termSeason, String keyword,
+            String category, String area) {
         TermSeason ts = TermSeason.valueOf(termSeason);
-        return lectureRepository.searchLectures(universityId, year, ts, keyword)
+        return lectureRepository.searchLectures(universityId, year, ts, keyword, category, area)
                 .stream().map(LectureResponse::from).toList();
+    }
+
+    @Override
+    public LectureResponse getById(Long lectureId) {
+        Lecture lecture = lectureRepository.findById(lectureId)
+                .orElseThrow(() -> BusinessException.notFound("강의를 찾을 수 없습니다."));
+        return LectureResponse.from(lecture);
     }
 
     @Override

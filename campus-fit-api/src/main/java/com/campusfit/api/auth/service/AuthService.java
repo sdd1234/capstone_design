@@ -7,4 +7,6 @@ public interface AuthService {
     SignupResponse signup(SignupRequest request, MultipartFile verificationFile);
 
     LoginResponse login(LoginRequest request);
+
+    RefreshResponse refresh(String refreshToken);
 }

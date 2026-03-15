@@ -7,6 +7,7 @@ import com.campusfit.api.domain.*;
 import com.campusfit.api.repository.*;
 import com.campusfit.api.security.JwtUtil;
 import com.campusfit.api.storage.FileStorageService;
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -83,5 +84,24 @@ public class AuthServiceImpl implements AuthService {
 
         return new LoginResponse(accessToken, refreshToken, user.getId(), user.getEmail(), user.getName(),
                 user.getRole().name());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RefreshResponse refresh(String refreshToken) {
+        Claims claims;
+        try {
+            claims = jwtUtil.parseToken(refreshToken);
+        } catch (Exception e) {
+            throw BusinessException.badRequest("유효하지 않은 refresh token입니다.");
+        }
+        if (!"refresh".equals(claims.get("type", String.class))) {
+            throw BusinessException.badRequest("refresh token이 아닙니다.");
+        }
+        Long userId = Long.valueOf(claims.getSubject());
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> BusinessException.notFound("사용자를 찾을 수 없습니다."));
+        String newAccessToken = jwtUtil.generateAccessToken(userId, user.getRole().name());
+        return new RefreshResponse(newAccessToken);
     }
 }

@@ -31,7 +31,7 @@ public class AiTimetableRecommendation {
     @Column(nullable = false, length = 10)
     private TermSeason termSeason;
 
-    @Column(columnDefinition = "TEXT")
+    @Lob
     private String requestParamsJson;
 
     @OneToMany(mappedBy = "recommendation", cascade = CascadeType.ALL, orphanRemoval = true)
