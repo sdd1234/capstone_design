@@ -7,7 +7,6 @@ import com.campusfit.api.common.enums.VerificationStatus;
 import com.campusfit.api.common.exception.BusinessException;
 import com.campusfit.api.domain.StudentVerification;
 import com.campusfit.api.domain.User;
-import com.campusfit.api.repository.FileRepository;
 import com.campusfit.api.repository.StudentVerificationRepository;
 import com.campusfit.api.repository.UserRepository;
 import com.campusfit.api.storage.FileStorageService;
@@ -17,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
+@SuppressWarnings("null")
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -24,7 +24,6 @@ public class StudentVerificationService {
 
     private final StudentVerificationRepository verificationRepository;
     private final UserRepository userRepository;
-    private final FileRepository fileRepository;
     private final FileStorageService fileStorageService;
 
     @Transactional(readOnly = true)

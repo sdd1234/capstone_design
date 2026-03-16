@@ -15,6 +15,7 @@ import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("null")
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -122,7 +123,7 @@ public class AiRecommendationServiceImpl implements AiRecommendationService {
         }
 
         // 목표 학점에 맞게 강의 선택 (3개 후보 생성)
-        List<List<Lecture>> plans = buildPlans(prioritized, targetCredits, maxCredits, maxDays, 3);
+        List<List<Lecture>> plans = buildPlans(prioritized, targetCredits, maxCredits, maxDays, 5);
 
         for (int i = 0; i < plans.size(); i++) {
             List<Lecture> plan = plans.get(i);

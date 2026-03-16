@@ -25,6 +25,7 @@ import java.time.LocalDate;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("null")
 @Slf4j
 @Component
 @RequiredArgsConstructor

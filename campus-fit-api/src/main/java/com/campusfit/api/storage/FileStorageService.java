@@ -10,6 +10,7 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+@SuppressWarnings("null")
 @Service
 public class FileStorageService {
 

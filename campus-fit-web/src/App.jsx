@@ -1,49 +1,88 @@
-import { useState } from 'react';
-import apiClient from './api/client';
+import { useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { getMe } from "./api/user";
+import Layout from "./components/Layout";
+import ProtectedRoute from "./components/ProtectedRoute";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
+import TimetablePage from "./pages/TimetablePage";
+import CalendarPage from "./pages/CalendarPage";
+import AiRecommendationPage from "./pages/AiRecommendationPage";
+import LecturePage from "./pages/LecturePage";
+import ProfilePage from "./pages/ProfilePage";
+import PreferencePage from "./pages/PreferencePage";
+import AdminPage from "./pages/AdminPage";
 
 function App() {
-  const [email, setEmail] = useState('test@uni.ac.kr');
-  const [password, setPassword] = useState('P@ssw0rd12');
-  const [result, setResult] = useState('');
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const loadUser = async () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     try {
-      const response = await apiClient.post('/api/v1/auth/login', { email, password });
-      const token = response.data?.data?.accessToken;
-      if (token) {
-        localStorage.setItem('accessToken', token);
-      }
-      setResult(JSON.stringify(response.data, null, 2));
-    } catch (error) {
-      setResult(error.response?.data ? JSON.stringify(error.response.data, null, 2) : error.message);
+      const res = await getMe();
+      setUser(res.data.data);
+    } catch {
+      localStorage.removeItem("accessToken");
+      setUser(null);
+    } finally {
+      setLoading(false);
     }
   };
 
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  if (loading) return <div className="loading">로딩 중...</div>;
+
   return (
-    <main className="page">
-      <section className="card">
-        <h1>Campus Fit Web Setup</h1>
-        <p>Spring Boot API and React app wiring is ready.</p>
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            user ? (
+              <Navigate to="/timetable" replace />
+            ) : (
+              <LoginPage onLogin={loadUser} />
+            )
+          }
+        />
+        <Route path="/signup" element={<SignupPage />} />
 
-        <form onSubmit={handleLogin}>
-          <label htmlFor="email">Email</label>
-          <input id="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+        <Route
+          element={
+            <ProtectedRoute user={user}>
+              <Layout user={user} onLogout={() => setUser(null)} />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/" element={<Navigate to="/timetable" replace />} />
+          <Route path="/timetable" element={<TimetablePage />} />
+          <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/ai" element={<AiRecommendationPage />} />
+          <Route path="/lectures" element={<LecturePage />} />
+          <Route
+            path="/profile"
+            element={<ProfilePage onUserUpdate={loadUser} />}
           />
+          <Route path="/preference" element={<PreferencePage />} />
+          {user?.role === "ADMIN" && (
+            <Route path="/admin" element={<AdminPage />} />
+          )}
+        </Route>
 
-          <button type="submit">Test Login API</button>
-        </form>
-
-        {result && <pre>{result}</pre>}
-      </section>
-    </main>
+        <Route
+          path="*"
+          element={<Navigate to={user ? "/timetable" : "/login"} replace />}
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
