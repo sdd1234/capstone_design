@@ -73,6 +73,7 @@ public class LectureImportServiceImpl implements LectureImportService {
                 if (row == null)
                     continue;
 
+                String dept = getCellText(row, 1); // Col 2: 학과(학부)명
                 String lectureNumber = getCellText(row, 2); // Col 3: 강좌번호
                 String courseName = getCellText(row, 3); // Col 4: 교과목명
                 String creditsStr = getCellText(row, 4); // Col 5: 학점
@@ -115,6 +116,7 @@ public class LectureImportServiceImpl implements LectureImportService {
                         .year(year)
                         .termSeason(ts)
                         .professor(professor)
+                        .dept(dept.isBlank() ? null : dept)
                         .room(roomParsed)
                         .lectureNumber(lectureNumber)
                         .area(area)

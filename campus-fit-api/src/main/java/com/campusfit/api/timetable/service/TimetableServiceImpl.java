@@ -26,20 +26,33 @@ public class TimetableServiceImpl implements TimetableService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> BusinessException.notFound("사용자를 찾을 수 없습니다."));
 
+        String termLabel = switch (req.termSeason()) {
+            case SPRING -> "1학기";
+            case SUMMER -> "여름방학";
+            case FALL -> "2학기";
+            case WINTER -> "겨울방학";
+        };
+        String title = (req.title() == null || req.title().isBlank())
+                ? req.year() + " " + termLabel
+                : req.title();
+
         Timetable timetable = Timetable.builder()
                 .user(user)
                 .year(req.year())
                 .termSeason(req.termSeason())
-                .title(req.title())
+                .title(title)
                 .sourceRecommendationId(req.sourceRecommendationId())
                 .build();
 
         if (req.lectureIds() != null) {
             List<Lecture> added = new ArrayList<>();
+            boolean skipConflictCheck = req.sourceRecommendationId() != null;
             req.lectureIds().forEach(lid -> {
                 Lecture lecture = lectureRepository.findById(lid)
                         .orElseThrow(() -> BusinessException.notFound("강의를 찾을 수 없습니다: " + lid));
-                checkScheduleConflicts(added, lecture);
+                if (!skipConflictCheck) {
+                    checkScheduleConflicts(added, lecture);
+                }
                 added.add(lecture);
                 timetable.getItems().add(TimetableItem.builder()
                         .timetable(timetable)

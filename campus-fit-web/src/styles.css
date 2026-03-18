@@ -298,16 +298,16 @@ input[type="color"] { height: 36px; width: 60px; padding: 2px 4px; cursor: point
 .timetable-item.active { border-color: var(--primary); background: var(--primary-light); }
 .tt-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
 .tt-meta { font-size: 0.78rem; color: var(--muted); margin-bottom: 8px; }
-.timetable-view { flex: 1; min-width: 520px; }
+.timetable-view { flex: 1; min-width: 0; overflow: hidden; }
 .timetable-view h3 { font-size: 1rem; margin-bottom: 14px; }
 
 /* ─── Timetable Grid ──────────────────────────────────────────── */
-.timetable-grid { overflow-x: auto; }
+.timetable-grid { overflow-x: auto; width: 100%; }
 .grid-header { display: flex; margin-left: 60px; }
 .day-col { width: 90px; text-align: center; font-weight: 600; font-size: 0.85rem; padding: 6px 0; color: var(--muted); }
 .grid-body { position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; min-width: 510px; }
 .hour-row { position: absolute; width: 100%; border-top: 1px solid #eee; }
-.hour-label { position: absolute; left: 4px; top: -10px; font-size: 0.72rem; color: var(--muted); width: 52px; text-align: right; }
+.hour-label { position: absolute; left: 4px; top: 3px; font-size: 0.72rem; color: var(--muted); width: 52px; text-align: right; }
 .lecture-block {
   position: absolute;
   border-radius: 6px;
@@ -450,43 +450,53 @@ pre {
 .cal-dow-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  margin-bottom: 4px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+  margin-bottom: 0;
 }
 .cal-dow {
   text-align: center;
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--muted);
-  padding: 4px 0;
+  padding: 6px 0;
+  background: var(--primary-light);
+  border-right: 1px solid var(--border);
 }
+.cal-dow:last-child { border-right: none; }
 .cal-dow:first-child { color: #e35a4a; }
 .cal-dow:last-child  { color: #4a6fe3; }
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
 }
 .cal-cell {
-  min-height: 88px;
+  min-height: 100px;
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
   padding: 6px;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: background 0.12s;
+  overflow: hidden;
 }
-.cal-cell.active-cell:hover { border-color: var(--primary); }
+.cal-cell:nth-child(7n) { border-right: none; }
+.cal-cell.active-cell:hover { background: rgba(79,156,249,0.06); }
 .cal-cell.empty-cell {
-  background: transparent;
-  border-color: transparent;
+  background: #f8f9fb;
   cursor: default;
 }
 .cal-cell.today-cell {
-  border-color: var(--primary);
   background: rgba(79, 156, 249, 0.08);
 }
 .cal-cell.selected-cell {
-  border-color: var(--primary);
   background: rgba(79, 156, 249, 0.14);
 }
 .cal-day-num {

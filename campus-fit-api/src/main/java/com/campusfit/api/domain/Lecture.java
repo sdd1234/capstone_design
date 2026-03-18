@@ -55,6 +55,9 @@ public class Lecture {
     @Column(length = 50)
     private String campus;
 
+    @Column(length = 100)
+    private String dept;
+
     @OneToMany(mappedBy = "lecture", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<LectureSchedule> schedules = new ArrayList<>();

@@ -74,10 +74,10 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> BusinessException.badRequest("이메일 또는 비밀번호가 올바르지 않습니다."));
+                .orElseThrow(() -> BusinessException.badRequest("존재하지 않는 이메일입니다."));
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw BusinessException.badRequest("이메일 또는 비밀번호가 올바르지 않습니다.");
+            throw BusinessException.badRequest("비밀번호가 올바르지 않습니다.");
         }
 
         String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole().name());
@@ -85,6 +85,14 @@ public class AuthServiceImpl implements AuthService {
 
         return new LoginResponse(accessToken, refreshToken, user.getId(), user.getEmail(), user.getName(),
                 user.getRole().name());
+    }
+
+    @Override
+    public void resetPassword(String email, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> BusinessException.badRequest("존재하지 않는 이메일입니다."));
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     @Override

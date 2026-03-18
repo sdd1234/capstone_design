@@ -153,7 +153,10 @@ export default function LecturePage() {
                   <div className="item-main">
                     <strong>{l.courseName}</strong>
                     <span className="item-meta">
-                      {l.professor || "미정"} · {l.credits}학점 · {l.room || ""}
+                      {l.professor
+                        ? `${l.professor}${l.dept ? ` (${l.dept})` : ""}`
+                        : "미정"}{" "}
+                      · {l.credits}학점 · {l.room || ""}
                     </span>
                     <div className="schedule-tags">
                       {(l.schedules || []).map((s, i) => (
@@ -178,7 +181,11 @@ export default function LecturePage() {
                     </tr>
                     <tr>
                       <th>교수</th>
-                      <td>{selected.professor || "-"}</td>
+                      <td>
+                        {selected.professor
+                          ? `${selected.professor}${selected.dept ? ` (${selected.dept})` : ""}`
+                          : "-"}
+                      </td>
                     </tr>
                     <tr>
                       <th>학점</th>

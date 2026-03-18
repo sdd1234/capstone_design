@@ -37,7 +37,39 @@ const COLORS = [
   "#4fc9f9",
 ];
 
-function TimetableGrid({ lectures }) {
+function LecBlock({ lec, idx, opacity = 1, dashed = false, prefix = "lec" }) {
+  return (lec.schedules || []).map((s, si) => {
+    const dayIndex = DAYS_ORDER.indexOf(s.dayOfWeek);
+    if (dayIndex < 0) return null;
+    const [sh, sm] = s.startTime.split(":").map(Number);
+    const [eh, em] = s.endTime.split(":").map(Number);
+    const top = (sh - 9 + sm / 60) * CELL_H;
+    const height = Math.max((eh - sh + (em - sm) / 60) * CELL_H, 24);
+    if (top < 0 || top >= HOURS.length * CELL_H) return null;
+    return (
+      <div
+        key={`${prefix}-${lec.id}-${si}`}
+        className="lecture-block"
+        style={{
+          top: `${top}px`,
+          left: `${60 + dayIndex * 90}px`,
+          width: "86px",
+          height: `${height}px`,
+          backgroundColor: COLORS[idx % COLORS.length],
+          opacity,
+          border: dashed ? "2px dashed rgba(0,0,0,0.3)" : "none",
+          zIndex: opacity < 1 ? 5 : 2,
+        }}
+      >
+        <div className="lec-name">{lec.courseName}</div>
+        <div className="lec-room">{lec.room || ""}</div>
+      </div>
+    );
+  });
+}
+
+function TimetableGrid({ lectures, previewLectures = [], hoverLec = null }) {
+  const baseCount = (lectures || []).length;
   return (
     <div className="timetable-grid">
       <div className="grid-header">
@@ -61,32 +93,28 @@ function TimetableGrid({ lectures }) {
             <span className="hour-label">{h}:00</span>
           </div>
         ))}
-        {(lectures || []).map((lec, idx) =>
-          (lec.schedules || []).map((s, si) => {
-            const dayIndex = DAYS_ORDER.indexOf(s.dayOfWeek);
-            if (dayIndex < 0) return null;
-            const [sh, sm] = s.startTime.split(":").map(Number);
-            const [eh, em] = s.endTime.split(":").map(Number);
-            const top = (sh - 9 + sm / 60) * CELL_H;
-            const height = Math.max((eh - sh + (em - sm) / 60) * CELL_H, 24);
-            if (top < 0 || top >= HOURS.length * CELL_H) return null;
-            return (
-              <div
-                key={`${lec.id}-${si}`}
-                className="lecture-block"
-                style={{
-                  top: `${top}px`,
-                  left: `${60 + dayIndex * 90}px`,
-                  width: "86px",
-                  height: `${height}px`,
-                  backgroundColor: COLORS[idx % COLORS.length],
-                }}
-              >
-                <div className="lec-name">{lec.courseName}</div>
-                <div className="lec-room">{lec.room || ""}</div>
-              </div>
-            );
-          }),
+        {(lectures || []).map((lec, idx) => (
+          <LecBlock key={lec.id} lec={lec} idx={idx} />
+        ))}
+        {previewLectures.map((lec, i) => (
+          <LecBlock
+            key={lec.id}
+            lec={lec}
+            idx={baseCount + i}
+            opacity={0.55}
+            dashed={true}
+            prefix="checked"
+          />
+        ))}
+        {hoverLec && (
+          <LecBlock
+            key={hoverLec.id}
+            lec={hoverLec}
+            idx={baseCount + previewLectures.length}
+            opacity={0.35}
+            dashed={true}
+            prefix="hover"
+          />
         )}
       </div>
     </div>
@@ -116,11 +144,11 @@ export default function TimetablePage() {
   const [form, setForm] = useState({
     year: initSem.year,
     termSeason: initSem.termSeason,
-    title: "",
   });
   const [lectures, setLectures] = useState([]);
   const [selectedLecIds, setSelectedLecIds] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [hoverLec, setHoverLec] = useState(null);
   const [error, setError] = useState("");
 
   const filtered = timetables.filter(
@@ -191,16 +219,20 @@ export default function TimetablePage() {
       setShowForm(false);
       setSelectedLecIds([]);
       setLectures([]);
+      setHoverLec(null);
       const newKey = makeSemKey(form.year, form.termSeason);
       setSemKey(newKey);
       localStorage.setItem("tt_semkey", newKey);
-      if (created?.id) {
+      if (created) {
         localStorage.setItem(
           `tt_sel_${form.year}_${form.termSeason}`,
           String(created.id),
         );
+        setTimetables((prev) => [
+          created,
+          ...prev.filter((t) => t.id !== created.id),
+        ]);
       }
-      loadTimetables();
     } catch (err) {
       setError(err.response?.data?.message || "시간표 생성 실패");
     }
@@ -281,15 +313,6 @@ export default function TimetablePage() {
                 <option value="WINTER">겨울방학</option>
               </select>
             </div>
-            <div className="field">
-              <label>제목</label>
-              <input
-                type="text"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                required
-              />
-            </div>
           </form>
           <div className="lecture-search">
             <div className="search-row">
@@ -320,6 +343,8 @@ export default function TimetablePage() {
                       className={
                         selectedLecIds.includes(l.id) ? "selected" : ""
                       }
+                      onMouseEnter={() => setHoverLec(l)}
+                      onMouseLeave={() => setHoverLec(null)}
                     >
                       <td>
                         <input
@@ -387,7 +412,19 @@ export default function TimetablePage() {
         </div>
         <div className="timetable-view">
           {selected && <h3>{selected.title}</h3>}
-          <TimetableGrid lectures={selected ? selected.lectures : []} />
+          <TimetableGrid
+            lectures={selected ? selected.lectures : []}
+            previewLectures={
+              showForm
+                ? lectures.filter((l) => selectedLecIds.includes(l.id))
+                : []
+            }
+            hoverLec={
+              showForm && hoverLec && !selectedLecIds.includes(hoverLec.id)
+                ? hoverLec
+                : null
+            }
+          />
         </div>
       </div>
     </div>

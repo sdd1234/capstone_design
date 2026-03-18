@@ -15,12 +15,14 @@ const ACADEMIC_COLORS = {
   REGISTRATION: "#4a6fe3",
   EXAM: "#e35a4a",
   HOLIDAY: "#c94fb8",
+  SCHOOL: "#f97c4f",
 };
 const ACADEMIC_LABELS = {
   SEMESTER: "학기",
-  REGISTRATION: "수강신제",
+  REGISTRATION: "수강신청",
   EXAM: "고사",
-  HOLIDAY: "휴일",
+  HOLIDAY: "공휴일",
+  SCHOOL: "학교행사",
 };
 
 const CATEGORIES = [
@@ -66,6 +68,29 @@ function MonthCalendar({
       ? `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`
       : null;
 
+  // 학사일정 lane 계산: 전체 이벤트 기준으로 전역 배정 → 달이 넘어가도 lane 번호 유지
+  const monthStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  const monthEnd = `${year}-${String(month + 1).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
+  const laneEnds = [];
+  const academicWithLanes = [...(academicEvents || [])]
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
+    .map((ae) => {
+      let lane = laneEnds.findIndex((end) => end < ae.startDate);
+      if (lane === -1) {
+        lane = laneEnds.length;
+        laneEnds.push(ae.endDate);
+      } else laneEnds[lane] = ae.endDate;
+      return { ...ae, lane };
+    });
+  // totalLanes: 이번 달에 보이는 이벤트 중 가장 높은 lane + 1
+  const visibleThisMonth = academicWithLanes.filter(
+    (ae) => ae.startDate <= monthEnd && ae.endDate >= monthStart,
+  );
+  const totalLanes =
+    visibleThisMonth.length > 0
+      ? Math.max(...visibleThisMonth.map((ae) => ae.lane)) + 1
+      : 0;
+
   return (
     <div className="month-calendar">
       <div className="cal-dow-header">
@@ -80,11 +105,15 @@ function MonthCalendar({
           const dateStr = ds(d);
           const isToday = dateStr === todayStr;
           const isSelected = dateStr === selectedDate;
-          const dayAcademic = d
-            ? (academicEvents || []).filter(
-                (ae) => dateStr >= ae.startDate && dateStr <= ae.endDate,
-              )
-            : [];
+          // 이 날의 lane 슬롯 배열 (없는 lane은 null → spacer)
+          const laneSlots = Array(totalLanes).fill(null);
+          if (d) {
+            academicWithLanes
+              .filter((ae) => dateStr >= ae.startDate && dateStr <= ae.endDate)
+              .forEach((ae) => {
+                laneSlots[ae.lane] = ae;
+              });
+          }
           const dayEvs = d
             ? (events || []).filter(
                 (ev) => ev.startAt && ev.startAt.startsWith(dateStr),
@@ -123,29 +152,68 @@ function MonthCalendar({
             >
               {d && (
                 <>
-                  {dayAcademic.length > 0 && (
+                  {totalLanes > 0 && (
                     <div
                       style={{
                         display: "flex",
-                        flexWrap: "wrap",
+                        flexDirection: "column",
                         gap: 2,
-                        marginBottom: 3,
+                        marginBottom: 2,
                       }}
                     >
-                      {dayAcademic.slice(0, 2).map((ae) => (
-                        <div
-                          key={ae.id}
-                          style={{
-                            height: 4,
-                            flex: "1 1 auto",
-                            minWidth: 12,
-                            borderRadius: 2,
-                            background: ACADEMIC_COLORS[ae.category] || "#999",
-                            title: ae.title,
-                          }}
-                          title={ae.title}
-                        />
-                      ))}
+                      {laneSlots.map((ae, laneIdx) => {
+                        if (!ae) {
+                          // 빈 슬롯: spacer로 높이만 확보
+                          return <div key={laneIdx} style={{ height: 18 }} />;
+                        }
+                        const isStart = dateStr === ae.startDate;
+                        const isEnd = dateStr === ae.endDate;
+                        const isSingle = isStart && isEnd;
+                        const isWeekStart = i % 7 === 0;
+                        const isWeekEnd = i % 7 === 6;
+                        const showLabel = isStart || (!isStart && isWeekStart);
+                        const bg = ACADEMIC_COLORS[ae.category] || "#999";
+                        let br, ml, mr;
+                        if (isSingle) {
+                          br = 3;
+                          ml = 0;
+                          mr = 0;
+                        } else if (showLabel) {
+                          const closeRight = isEnd || isWeekEnd;
+                          br = closeRight ? 3 : "3px 0 0 3px";
+                          ml = 0;
+                          mr = closeRight ? 0 : -6;
+                        } else if (isEnd || isWeekEnd) {
+                          br = "0 3px 3px 0";
+                          ml = -6;
+                          mr = 0;
+                        } else {
+                          br = 0;
+                          ml = -6;
+                          mr = -6;
+                        }
+                        return (
+                          <div
+                            key={laneIdx}
+                            title={ae.title}
+                            style={{
+                              background: bg,
+                              color: showLabel ? "#fff" : "transparent",
+                              borderRadius: br,
+                              marginLeft: ml,
+                              marginRight: mr,
+                              fontSize: "0.68rem",
+                              padding: "1px 4px",
+                              height: 18,
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {ae.title}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                   <div
@@ -313,8 +381,21 @@ export default function CalendarPage() {
     }
   };
 
-  const handleDayClick = (d) =>
+  const handleDayClick = (d) => {
     setSelectedDate((prev) => (prev === d ? null : d));
+  };
+
+  const handleOpenEventModal = () => {
+    const startVal = selectedDate ? `${selectedDate}T09:00` : "";
+    const endVal = selectedDate ? `${selectedDate}T10:00` : "";
+    setEventForm((f) => ({ ...f, startAt: startVal, endAt: endVal }));
+    setShowEventModal(true);
+  };
+
+  const handleOpenTaskModal = () => {
+    setTaskForm((f) => ({ ...f, scheduledDate: selectedDate || "" }));
+    setShowTaskModal(true);
+  };
   const prevMonth = () => {
     if (month === 0) {
       setYear((y) => y - 1);
@@ -351,6 +432,11 @@ export default function CalendarPage() {
           (t.dueAt && t.dueAt.startsWith(selectedDate)),
       )
     : [];
+  const dayAcademicForPanel = selectedDate
+    ? academicEvents.filter(
+        (ae) => selectedDate >= ae.startDate && selectedDate <= ae.endDate,
+      )
+    : [];
 
   return (
     <div className="page-container">
@@ -377,18 +463,12 @@ export default function CalendarPage() {
           </button>
         </div>
         {(tab === "events" || tab === "calendar") && (
-          <button
-            className="btn-primary"
-            onClick={() => setShowEventModal(true)}
-          >
+          <button className="btn-primary" onClick={handleOpenEventModal}>
             + 일정 추가
           </button>
         )}
         {tab === "tasks" && (
-          <button
-            className="btn-primary"
-            onClick={() => setShowTaskModal(true)}
-          >
+          <button className="btn-primary" onClick={handleOpenTaskModal}>
             + 할 일 추가
           </button>
         )}
@@ -419,17 +499,6 @@ export default function CalendarPage() {
               오늘
             </button>
           </div>
-          <div className="cal-legend">
-            {Object.entries(ACADEMIC_LABELS).map(([cat, label]) => (
-              <span key={cat} className="cal-legend-item">
-                <span
-                  className="cal-legend-dot"
-                  style={{ background: ACADEMIC_COLORS[cat] }}
-                />
-                {label}
-              </span>
-            ))}
-          </div>
           <div className="cal-layout">
             <MonthCalendar
               year={year}
@@ -443,7 +512,8 @@ export default function CalendarPage() {
             {selectedDate && (
               <div className="day-panel">
                 <h4>{selectedDate}</h4>
-                {dayEventsForPanel.length === 0 &&
+                {dayAcademicForPanel.length === 0 &&
+                  dayEventsForPanel.length === 0 &&
                   dayTasksForPanel.length === 0 && (
                     <p
                       className="empty"
@@ -452,6 +522,31 @@ export default function CalendarPage() {
                       일정이 없습니다.
                     </p>
                   )}
+                {dayAcademicForPanel.map((ae) => (
+                  <div
+                    key={ae.id}
+                    className="day-item"
+                    style={{
+                      borderLeft: `3px solid ${ACADEMIC_COLORS[ae.category] || "#999"}`,
+                    }}
+                  >
+                    <span style={{ fontSize: "0.85rem" }}>
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          background: ACADEMIC_COLORS[ae.category] || "#999",
+                          color: "#fff",
+                          borderRadius: 4,
+                          padding: "1px 5px",
+                          marginRight: 5,
+                        }}
+                      >
+                        {ACADEMIC_LABELS[ae.category] || ae.category}
+                      </span>
+                      {ae.title}
+                    </span>
+                  </div>
+                ))}
                 {dayEventsForPanel.map((ev) => (
                   <div
                     key={ev.id}
@@ -504,7 +599,7 @@ export default function CalendarPage() {
             </div>
             <form onSubmit={handleCreateEvent} className="form-grid">
               <div className="field">
-                <label>제목</label>
+                <label>이름</label>
                 <input
                   value={eventForm.title}
                   onChange={(e) =>
@@ -512,21 +607,6 @@ export default function CalendarPage() {
                   }
                   required
                 />
-              </div>
-              <div className="field">
-                <label>카테고리</label>
-                <select
-                  value={eventForm.category}
-                  onChange={(e) =>
-                    setEventForm({ ...eventForm, category: e.target.value })
-                  }
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {CATEGORY_LABELS[c]}
-                    </option>
-                  ))}
-                </select>
               </div>
               <div className="field">
                 <label>시작</label>
@@ -601,7 +681,7 @@ export default function CalendarPage() {
             </div>
             <form onSubmit={handleCreateTask} className="form-grid">
               <div className="field">
-                <label>제목</label>
+                <label>이름</label>
                 <input
                   value={taskForm.title}
                   onChange={(e) =>
@@ -609,21 +689,6 @@ export default function CalendarPage() {
                   }
                   required
                 />
-              </div>
-              <div className="field">
-                <label>카테고리</label>
-                <select
-                  value={taskForm.category}
-                  onChange={(e) =>
-                    setTaskForm({ ...taskForm, category: e.target.value })
-                  }
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {CATEGORY_LABELS[c]}
-                    </option>
-                  ))}
-                </select>
               </div>
               <div className="field">
                 <label>예정일</label>
@@ -675,9 +740,6 @@ export default function CalendarPage() {
                 style={{ borderLeft: `4px solid ${ev.color || "#4f9cf9"}` }}
               >
                 <div className="item-main">
-                  <span className="badge">
-                    {CATEGORY_LABELS[ev.category] || ev.category}
-                  </span>
                   <strong>{ev.title}</strong>
                   <span className="item-meta">
                     {ev.startAt?.replace("T", " ").slice(0, 16)} ~{" "}
@@ -708,9 +770,6 @@ export default function CalendarPage() {
                 className={`list-item ${task.status === "DONE" ? "done" : ""}`}
               >
                 <div className="item-main">
-                  <span className="badge">
-                    {CATEGORY_LABELS[task.category] || task.category}
-                  </span>
                   <strong>{task.title}</strong>
                   {task.dueAt && (
                     <span className="item-meta">

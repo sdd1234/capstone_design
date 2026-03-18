@@ -51,4 +51,13 @@ public class AuthController {
     public ResponseEntity<ApiResponse<RefreshResponse>> refresh(@Valid @RequestBody RefreshRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(authService.refresh(request.refreshToken())));
     }
+
+    @Operation(summary = "비밀번호 재설정", description = "이메일과 새 비밀번호를 입력해 비밀번호를 재설정합니다.")
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @RequestParam String email,
+            @RequestParam String newPassword) {
+        authService.resetPassword(email, newPassword);
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
 }
