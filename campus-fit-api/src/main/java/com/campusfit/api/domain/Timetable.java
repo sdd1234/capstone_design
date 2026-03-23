@@ -4,6 +4,7 @@ import com.campusfit.api.common.enums.TermSeason;
 import com.campusfit.api.common.enums.TimetableStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +44,7 @@ public class Timetable {
     private Long sourceRecommendationId;
 
     @OneToMany(mappedBy = "timetable", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 50)
     @Builder.Default
     private List<TimetableItem> items = new ArrayList<>();
 

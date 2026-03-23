@@ -1,20 +1,19 @@
 package com.campusfit.api.config;
 
 import com.campusfit.api.academic.service.LectureImportService;
+import com.campusfit.api.common.enums.DayOfWeekEnum;
+import com.campusfit.api.common.enums.TermSeason;
 import com.campusfit.api.common.enums.UserRole;
 import com.campusfit.api.common.enums.UserStatus;
-import com.campusfit.api.domain.AcademicCalendarEvent;
-import com.campusfit.api.domain.University;
-import com.campusfit.api.domain.User;
-import com.campusfit.api.repository.AcademicCalendarEventRepository;
-import com.campusfit.api.repository.LectureImportLogRepository;
-import com.campusfit.api.repository.UniversityRepository;
-import com.campusfit.api.repository.UserRepository;
+import com.campusfit.api.domain.*;
+import com.campusfit.api.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import java.io.IOException;
@@ -22,6 +21,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -36,6 +37,8 @@ public class DataInitializer implements ApplicationRunner {
     private final LectureImportLogRepository importLogRepository;
     private final LectureImportService lectureImportService;
     private final AcademicCalendarEventRepository calendarEventRepository;
+    private final CourseRepository courseRepository;
+    private final LectureRepository lectureRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${app.excel.import-dir:../excel}")
@@ -73,8 +76,154 @@ public class DataInitializer implements ApplicationRunner {
         // 3. excel/ 폴더의 .xlsx 파일 자동 스캔 임포트
         importFromExcelDir();
 
-        // 4. 학사 캘린더 데이터 초기화 (2026년)
+        // 4. classpath:data/ 내장 Excel 임포트 (resources/data/*.xlsx)
+        importFromClasspath();
+
+        // 5. 강의 데이터가 없으면 샘플 데이터 생성
+        if (lectureRepository.count() == 0) {
+            initSampleLectures();
+        }
+
+        // 6. 학사 캘린더 데이터 초기화 (2026년)
         initAcademicCalendar();
+    }
+
+    /**
+     * Excel 파일 없을 때 사용할 샘플 강의 데이터 (계명대학교 2026년 1학기)
+     */
+    private void initSampleLectures() {
+        University univ = universityRepository.findByName("계명대학교").orElse(null);
+        if (univ == null)
+            return;
+
+        // { 과목명, 학점, 카테고리, 교수명, 강의실, 강의번호, 요일1, 시작1, 종료1, 요일2, 시작2, 종료2 }
+        // 요일2가 null이면 단일 요일 강의
+        Object[][] data = {
+                { "Python 프로그래밍", 3, "전공선택", "김민준", "공학관 301", "CS101", "MON", "09:00", "10:30", "WED", "09:00",
+                        "10:30" },
+                { "데이터베이스", 3, "전공필수", "이서연", "공학관 302", "CS102", "TUE", "10:30", "12:00", "THU", "10:30", "12:00" },
+                { "알고리즘", 3, "전공필수", "박지훈", "공학관 303", "CS103", "MON", "13:30", "15:00", "WED", "13:30", "15:00" },
+                { "운영체제", 3, "전공선택", "최수아", "공학관 201", "CS104", "TUE", "13:30", "15:00", "THU", "13:30", "15:00" },
+                { "컴퓨터네트워크", 3, "전공선택", "정현우", "공학관 202", "CS105", "MON", "15:00", "16:30", "WED", "15:00", "16:30" },
+                { "자료구조", 3, "전공필수", "강예은", "공학관 101", "CS106", "TUE", "09:00", "10:30", "THU", "09:00", "10:30" },
+                { "웹프로그래밍", 3, "전공선택", "윤성민", "공학관 401", "CS107", "MON", "10:30", "12:00", "WED", "10:30", "12:00" },
+                { "소프트웨어공학", 3, "전공선택", "임지원", "공학관 402", "CS108", "TUE", "15:00", "16:30", "THU", "15:00", "16:30" },
+                { "인공지능", 3, "전공선택", "한동현", "공학관 403", "CS109", "WED", "10:30", "12:00", "FRI", "10:30", "12:00" },
+                { "컴퓨터구조", 3, "전공필수", "오채린", "공학관 102", "CS110", "MON", "09:00", "10:30", "FRI", "09:00", "10:30" },
+                { "모바일앱개발", 3, "전공선택", "서진호", "공학관 501", "CS111", "TUE", "10:30", "12:00", "THU", "10:30", "12:00" },
+                { "클라우드컴퓨팅", 3, "전공선택", "권나은", "공학관 502", "CS112", "WED", "13:30", "15:00", "FRI", "13:30", "15:00" },
+                { "보안공학", 3, "전공선택", "백승준", "공학관 503", "CS113", "MON", "13:30", "15:00", "THU", "13:30", "15:00" },
+                { "딥러닝", 3, "전공선택", "남유진", "공학관 203", "CS114", "TUE", "15:00", "16:30", "FRI", "15:00", "16:30" },
+                { "컴파일러", 3, "전공선택", "전민서", "공학관 204", "CS115", "WED", "09:00", "10:30", "FRI", "09:00", "10:30" },
+                { "영어회화1", 2, "교양필수", "Smith John", "인문관 101", "GE101", "TUE", "09:00", "10:00", null, null, null },
+                { "영어회화2", 2, "교양필수", "Jane Brown", "인문관 102", "GE102", "THU", "09:00", "10:00", null, null, null },
+                { "대학수학", 3, "교양필수", "이상호", "이학관 201", "GE103", "MON", "09:00", "10:30", "WED", "09:00", "10:30" },
+                { "글쓰기와의사소통", 2, "교양필수", "김혜림", "인문관 201", "GE104", "FRI", "10:30", "12:30", null, null, null },
+                { "창의적사고", 2, "교양선택", "박지영", "인문관 301", "GE105", "TUE", "13:30", "15:30", null, null, null },
+                { "취창업설계", 2, "교양선택", "조성현", "경상관 101", "GE106", "MON", "16:00", "18:00", null, null, null },
+                { "경영학원론", 3, "교양선택", "황민철", "경상관 201", "BA101", "TUE", "10:30", "12:00", "THU", "10:30", "12:00" },
+                { "마케팅원론", 3, "전공선택", "류소영", "경상관 202", "BA102", "MON", "13:30", "15:00", "WED", "13:30", "15:00" },
+                { "회계원리", 3, "전공선택", "신동우", "경상관 301", "BA103", "TUE", "09:00", "10:30", "THU", "09:00", "10:30" },
+                { "통계학", 3, "교양선택", "문하늘", "이학관 101", "ST101", "WED", "15:00", "16:30", "FRI", "15:00", "16:30" },
+                { "선형대수학", 3, "전공선택", "안준혁", "이학관 202", "MA101", "MON", "10:30", "12:00", "THU", "10:30", "12:00" },
+                { "물리학1", 3, "교양필수", "노수빈", "자연관 101", "PH101", "TUE", "13:30", "15:00", "FRI", "13:30", "15:00" },
+                { "캡스톤디자인", 3, "전공필수", "장태양", "공학관 601", "CS200", "WED", "16:00", "19:00", null, null, null },
+                { "졸업프로젝트", 2, "전공필수", "이미래", "공학관 602", "CS201", "THU", "16:00", "18:00", null, null, null },
+                { "스타트업실습", 2, "교양선택", "홍기훈", "경상관 401", "GE201", "FRI", "13:30", "15:30", null, null, null },
+        };
+
+        int count = 0;
+        for (Object[] row : data) {
+            String courseName = (String) row[0];
+            int credits = (int) row[1];
+            String category = (String) row[2];
+            String professor = (String) row[3];
+            String room = (String) row[4];
+            String lectureNum = (String) row[5];
+
+            Course course = courseRepository.findByUniversityIdAndName(univ.getId(), courseName)
+                    .orElseGet(() -> courseRepository.save(Course.builder()
+                            .university(univ)
+                            .name(courseName)
+                            .credits(credits)
+                            .category(category)
+                            .build()));
+
+            boolean exists = lectureRepository
+                    .findByLectureNumberAndYearAndTermSeason(lectureNum, YEAR, TermSeason.valueOf(TERM)).isPresent();
+            if (exists)
+                continue;
+
+            Lecture lecture = Lecture.builder()
+                    .course(course)
+                    .university(univ)
+                    .year(YEAR)
+                    .termSeason(TermSeason.valueOf(TERM))
+                    .professor(professor)
+                    .room(room)
+                    .lectureNumber(lectureNum)
+                    .build();
+
+            String day1 = (String) row[6];
+            String start1 = (String) row[7];
+            String end1 = (String) row[8];
+            String day2 = (String) row[9];
+            String start2 = (String) row[10];
+            String end2 = (String) row[11];
+
+            if (day1 != null) {
+                LectureSchedule s = LectureSchedule.builder()
+                        .lecture(lecture)
+                        .dayOfWeek(DayOfWeekEnum.valueOf(day1))
+                        .startTime(LocalTime.parse(start1))
+                        .endTime(LocalTime.parse(end1))
+                        .build();
+                lecture.getSchedules().add(s);
+            }
+            if (day2 != null) {
+                LectureSchedule s = LectureSchedule.builder()
+                        .lecture(lecture)
+                        .dayOfWeek(DayOfWeekEnum.valueOf(day2))
+                        .startTime(LocalTime.parse(start2))
+                        .endTime(LocalTime.parse(end2))
+                        .build();
+                lecture.getSchedules().add(s);
+            }
+
+            lectureRepository.save(lecture);
+            count++;
+        }
+        log.info("✅ 샘플 강의 데이터 생성 완료: {}건 (2026년 1학기)", count);
+    }
+
+    /**
+     * classpath:data/*.xlsx 에 번들된 엑셀 파일을 임포트합니다.
+     * (src/main/resources/data/ 폴더의 파일들)
+     */
+    private void importFromClasspath() {
+        Set<String> imported = importLogRepository.findAllByOrderByImportedAtDesc()
+                .stream().map(l -> l.getFileName()).collect(Collectors.toSet());
+
+        try {
+            PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+            Resource[] resources = resolver.getResources("classpath:data/*.xlsx");
+            for (Resource res : resources) {
+                String fileName = res.getFilename();
+                if (imported.contains(fileName)) {
+                    log.info("⏭️  이미 임포트됨 — 건너뜀: {}", fileName);
+                    continue;
+                }
+                try (var is = res.getInputStream()) {
+                    int count = lectureImportService.importFromExcel(
+                            is, fileName, UNIVERSITY_ID, YEAR, TERM);
+                    log.info("✅ classpath 강의 임포트 완료: {} → {}건", fileName, count);
+                } catch (IOException e) {
+                    log.error("❌ classpath 강의 임포트 실패: {} — {}", fileName, e.getMessage());
+                }
+            }
+        } catch (IOException e) {
+            log.warn("⚠️  classpath:data/ 스캔 실패: {}", e.getMessage());
+        }
     }
 
     /**

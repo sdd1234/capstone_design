@@ -8,19 +8,24 @@
     "net10.0": []
   },
   "packageFolders": {
-    "C:\\Users\\KIM\\.nuget\\packages\\": {}
+    "C:\\Users\\김지훈\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\KIM\\Desktop\\test\\test.csproj",
+      "projectUniqueName": "C:\\Users\\김지훈\\Desktop\\git\\capstone_design\\test.csproj",
       "projectName": "test",
-      "projectPath": "C:\\Users\\KIM\\Desktop\\test\\test.csproj",
-      "packagesPath": "C:\\Users\\KIM\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\KIM\\Desktop\\test\\obj\\",
+      "projectPath": "C:\\Users\\김지훈\\Desktop\\git\\capstone_design\\test.csproj",
+      "packagesPath": "C:\\Users\\김지훈\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\김지훈\\Desktop\\git\\capstone_design\\obj\\",
       "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
       "configFilePaths": [
-        "C:\\Users\\KIM\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\김지훈\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config"
       ],
       "originalTargetFrameworks": [
         "net10.0"

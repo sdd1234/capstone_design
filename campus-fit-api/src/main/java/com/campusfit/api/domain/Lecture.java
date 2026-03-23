@@ -3,6 +3,7 @@ package com.campusfit.api.domain;
 import com.campusfit.api.common.enums.TermSeason;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,6 +60,7 @@ public class Lecture {
     private String dept;
 
     @OneToMany(mappedBy = "lecture", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 50)
     @Builder.Default
     private List<LectureSchedule> schedules = new ArrayList<>();
 

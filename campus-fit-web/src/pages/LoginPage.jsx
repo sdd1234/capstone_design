@@ -37,6 +37,23 @@ export default function LoginPage({ onLogin }) {
     }
   };
 
+  // 테스트 로그인
+  const handleTestLogin = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await login("admin@campusfit.com", "admin1234!");
+      const { accessToken } = res.data.data;
+      localStorage.setItem("accessToken", accessToken);
+      await onLogin();
+      navigate("/timetable");
+    } catch (err) {
+      setError(err.response?.data?.message || "테스트 로그인 실패");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleResetSubmit = async (e) => {
     e.preventDefault();
     setResetError("");
@@ -116,6 +133,24 @@ export default function LoginPage({ onLogin }) {
             비밀번호를 잊으셨나요?
           </button>
         </p>
+        <button
+          type="button"
+          onClick={handleTestLogin}
+          style={{
+            width: "100%",
+            padding: "10px 16px",
+            background: "#f0f0f0",
+            border: "1px solid #ddd",
+            borderRadius: 8,
+            cursor: "pointer",
+            fontSize: "0.9rem",
+            fontWeight: 500,
+            marginTop: 16,
+            marginBottom: 16,
+          }}
+        >
+          🚀 테스트 로그인 (admin@campusfit.com)
+        </button>
         <p className="auth-link">
           계정이 없으신가요? <Link to="/signup">회원가입</Link>
         </p>

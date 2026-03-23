@@ -22,7 +22,7 @@ const TERM_LABELS = {
 };
 const DAY_LABELS = { MON: "월", TUE: "화", WED: "수", THU: "목", FRI: "금" };
 const DAYS_ORDER = ["MON", "TUE", "WED", "THU", "FRI"];
-const HOURS = Array.from({ length: 10 }, (_, i) => i + 9); // 9~18
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 9); // 9~22시
 const CELL_H = 52;
 const COLORS = [
   "#4f9cf9",
@@ -45,7 +45,7 @@ function LecBlock({ lec, idx, opacity = 1, dashed = false, prefix = "lec" }) {
     const [eh, em] = s.endTime.split(":").map(Number);
     const top = (sh - 9 + sm / 60) * CELL_H;
     const height = Math.max((eh - sh + (em - sm) / 60) * CELL_H, 24);
-    if (top < 0 || top >= HOURS.length * CELL_H) return null;
+    if (top < 0 || top > HOURS.length * CELL_H) return null;
     return (
       <div
         key={`${prefix}-${lec.id}-${si}`}
@@ -170,8 +170,18 @@ export default function TimetablePage() {
     try {
       const res = await listTimetables();
       setTimetables(res.data.data || []);
-    } catch {
-      setError("시간표를 불러오지 못했습니다.");
+    } catch (err) {
+      const status = err.response?.status;
+      const msg =
+        err.response?.data?.message || err.message || "알 수 없는 오류";
+      console.error("시간표 로드 실패:", err);
+      if (status === 401) {
+        setError("로그인이 필요합니다. (401)");
+      } else {
+        setError(
+          `시간표를 불러오지 못했습니다. [${status || "네트워크 오류"}] ${msg}`,
+        );
+      }
     }
   };
 

@@ -8,7 +8,7 @@ import { createTimetable } from "../api/timetable";
 
 const DAY_LABELS = { MON: "월", TUE: "화", WED: "수", THU: "목", FRI: "금" };
 const MINI_DAYS = ["MON", "TUE", "WED", "THU", "FRI"];
-const MINI_HOURS = Array.from({ length: 10 }, (_, i) => i + 9);
+const MINI_HOURS = Array.from({ length: 14 }, (_, i) => i + 9); // 9~22시
 const MINI_CELL = 22;
 const MINI_COL = 42;
 const COLORS = [
@@ -88,7 +88,7 @@ function MiniGrid({ lectures }) {
             const [eh, em] = s.endTime.split(":").map(Number);
             const top = (sh - 9 + sm / 60) * MINI_CELL;
             const height = Math.max((eh - sh + (em - sm) / 60) * MINI_CELL, 14);
-            if (top < 0 || top >= MINI_HOURS.length * MINI_CELL) return null;
+            if (top < 0 || top > MINI_HOURS.length * MINI_CELL) return null;
             return (
               <div
                 key={`${lec.id}-${si}`}
