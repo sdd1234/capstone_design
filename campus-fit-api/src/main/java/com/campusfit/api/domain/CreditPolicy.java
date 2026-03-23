@@ -23,4 +23,13 @@ public class CreditPolicy {
     private Integer minCredits;
     private Integer maxCredits;
     private Integer targetCredits;
+
+    /** 전공 목표 학점 (null이면 제한 없음) */
+    private Integer targetMajorCredits;
+
+    /** 교양 목표 학점 (null이면 제한 없음) */
+    private Integer targetGeneralCredits;
+
+    /** 원격(온라인) 목표 학점 (null이면 제한 없음) */
+    private Integer targetRemoteCredits;
 }

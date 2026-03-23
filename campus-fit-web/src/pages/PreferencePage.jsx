@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getPreference, savePreference } from "../api/preference";
+import { getDepts, listLectures } from "../api/academic";
 
 const DAYS = ["MON", "TUE", "WED", "THU", "FRI"];
 const DAY_LABELS = { MON: "월", TUE: "화", WED: "수", THU: "목", FRI: "금" };
@@ -7,8 +8,22 @@ const DAY_LABELS = { MON: "월", TUE: "화", WED: "수", THU: "목", FRI: "금" 
 const emptyPref = {
   year: 2026,
   termSeason: "SPRING",
-  creditPolicy: { minCredits: 12, maxCredits: 21, targetCredits: 18 },
-  options: { excludeMorning: false, maxDaysPerWeek: 5, allowGapsMinutes: 0 },
+  creditPolicy: {
+    minCredits: 12,
+    maxCredits: 21,
+    targetCredits: 18,
+    targetMajorCredits: 9,
+    targetGeneralCredits: 6,
+    targetRemoteCredits: 0,
+  },
+  options: {
+    excludeMorning: false,
+    maxDaysPerWeek: 5,
+    allowGapsMinutes: 0,
+    dept: "",
+    preferMajorOnly: true,
+    grade: null,
+  },
   timeRanges: [],
   desiredCourses: [],
 };
@@ -18,18 +33,36 @@ export default function PreferencePage() {
   const [loaded, setLoaded] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+  const [depts, setDepts] = useState([]);
+  const [courseSearches, setCourseSearches] = useState({});
+
+  // 학과 목록: loaded 여부와 무관하게 year/termSeason 변경 시 자동 로드
+  useEffect(() => {
+    getDepts(pref.year, pref.termSeason)
+      .then((res) => setDepts(res.data.data || []))
+      .catch(() => setDepts([]));
+  }, [pref.year, pref.termSeason]);
 
   const handleLoad = async () => {
     setError("");
     setMsg("");
+    setCourseSearches({});
+    // 학과 목록 재조회
+    getDepts(pref.year, pref.termSeason)
+      .then((res) => setDepts(res.data.data || []))
+      .catch(() => {});
     try {
       const res = await getPreference(pref.year, pref.termSeason);
       const data = res.data.data;
       setPref({
         year: data.year,
         termSeason: data.termSeason,
-        creditPolicy: data.creditPolicy || emptyPref.creditPolicy,
-        options: data.options || emptyPref.options,
+        creditPolicy: { ...emptyPref.creditPolicy, ...data.creditPolicy },
+        options: {
+          ...emptyPref.options,
+          ...data.options,
+          preferMajorOnly: true,
+        },
         timeRanges: data.timeRanges || [],
         desiredCourses: data.desiredCourses || [],
       });
@@ -88,7 +121,10 @@ export default function PreferencePage() {
   const addDesiredCourse = () => {
     setPref({
       ...pref,
-      desiredCourses: [...pref.desiredCourses, { rawText: "", priority: 1 }],
+      desiredCourses: [
+        ...pref.desiredCourses,
+        { courseId: null, rawText: "", priority: 1 },
+      ],
     });
   };
 
@@ -97,6 +133,7 @@ export default function PreferencePage() {
       ...pref,
       desiredCourses: pref.desiredCourses.filter((_, i) => i !== idx),
     });
+    setCourseSearches({});
   };
 
   const updateDesiredCourse = (idx, key, value) => {
@@ -104,6 +141,45 @@ export default function PreferencePage() {
       i === idx ? { ...d, [key]: value } : d,
     );
     setPref({ ...pref, desiredCourses: updated });
+  };
+
+  const handleCourseSearch = async (idx, query) => {
+    setCourseSearches((prev) => ({
+      ...prev,
+      [idx]: { ...(prev[idx] || {}), query, open: false },
+    }));
+    if (!query || query.length < 1) return;
+    try {
+      const res = await listLectures({
+        universityId: 1,
+        year: pref.year,
+        termSeason: pref.termSeason,
+        keyword: query,
+      });
+      const results = res.data.data || [];
+      setCourseSearches((prev) => ({
+        ...prev,
+        [idx]: { query, results, open: results.length > 0 },
+      }));
+    } catch {
+      setCourseSearches((prev) => ({
+        ...prev,
+        [idx]: { query, results: [], open: false },
+      }));
+    }
+  };
+
+  const selectCourse = (idx, lecture) => {
+    const updated = pref.desiredCourses.map((d, i) =>
+      i === idx
+        ? { ...d, courseId: lecture.courseId, rawText: lecture.courseName }
+        : d,
+    );
+    setPref({ ...pref, desiredCourses: updated });
+    setCourseSearches((prev) => ({
+      ...prev,
+      [idx]: { query: lecture.courseName, results: [], open: false },
+    }));
   };
 
   return (
@@ -196,29 +272,122 @@ export default function PreferencePage() {
                 />
               </div>
             </div>
+            <div className="form-row" style={{ marginTop: "0.75rem" }}>
+              <div className="field">
+                <label>전공 목표 학점</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={pref.creditPolicy.targetMajorCredits ?? 0}
+                  onChange={(e) =>
+                    setPref({
+                      ...pref,
+                      creditPolicy: {
+                        ...pref.creditPolicy,
+                        targetMajorCredits: parseInt(e.target.value),
+                      },
+                    })
+                  }
+                />
+              </div>
+              <div className="field">
+                <label>교양 목표 학점</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={pref.creditPolicy.targetGeneralCredits ?? 0}
+                  onChange={(e) =>
+                    setPref({
+                      ...pref,
+                      creditPolicy: {
+                        ...pref.creditPolicy,
+                        targetGeneralCredits: parseInt(e.target.value),
+                      },
+                    })
+                  }
+                />
+              </div>
+              <div className="field">
+                <label>원격 목표 학점</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={pref.creditPolicy.targetRemoteCredits ?? 0}
+                  onChange={(e) =>
+                    setPref({
+                      ...pref,
+                      creditPolicy: {
+                        ...pref.creditPolicy,
+                        targetRemoteCredits: parseInt(e.target.value),
+                      },
+                    })
+                  }
+                />
+              </div>
+            </div>
           </div>
 
           {/* Options */}
           <div className="card">
             <h3>기타 설정</h3>
             <div className="form-row">
-              <div className="field-check">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={pref.options.excludeMorning}
-                    onChange={(e) =>
-                      setPref({
-                        ...pref,
-                        options: {
-                          ...pref.options,
-                          excludeMorning: e.target.checked,
-                        },
-                      })
-                    }
-                  />
-                  오전(12시 이전) 강의 제외
-                </label>
+              <div className="field">
+                <label>학과</label>
+                <select
+                  value={pref.options.dept || ""}
+                  onChange={(e) =>
+                    setPref({
+                      ...pref,
+                      options: { ...pref.options, dept: e.target.value },
+                    })
+                  }
+                >
+                  <option value="">전체 (선택 안 함)</option>
+                  {depts.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>학년</label>
+                <select
+                  value={pref.options.grade ?? ""}
+                  onChange={(e) =>
+                    setPref({
+                      ...pref,
+                      options: {
+                        ...pref.options,
+                        grade:
+                          e.target.value === ""
+                            ? null
+                            : parseInt(e.target.value),
+                      },
+                    })
+                  }
+                >
+                  <option value="">전학년</option>
+                  {[1, 2, 3, 4].map((g) => (
+                    <option key={g} value={g}>
+                      {g}학년
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>학기</label>
+                <select
+                  value={pref.termSeason}
+                  onChange={(e) =>
+                    setPref({ ...pref, termSeason: e.target.value })
+                  }
+                >
+                  <option value="SPRING">1학기</option>
+                  <option value="FALL">2학기</option>
+                  <option value="SUMMER">여름학기</option>
+                  <option value="WINTER">겨울학기</option>
+                </select>
               </div>
               <div className="field">
                 <label>최대 등교일수</label>
@@ -240,6 +409,26 @@ export default function PreferencePage() {
                     </option>
                   ))}
                 </select>
+              </div>
+            </div>
+            <div className="form-row" style={{ marginTop: "0.5rem" }}>
+              <div className="field-check">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={pref.options.excludeMorning}
+                    onChange={(e) =>
+                      setPref({
+                        ...pref,
+                        options: {
+                          ...pref.options,
+                          excludeMorning: e.target.checked,
+                        },
+                      })
+                    }
+                  />
+                  9시 수업 제외
+                </label>
               </div>
             </div>
           </div>
@@ -319,40 +508,111 @@ export default function PreferencePage() {
                 + 추가
               </button>
             </div>
-            {pref.desiredCourses.map((d, idx) => (
-              <div key={idx} className="desired-course-row">
-                <input
-                  placeholder="과목명 또는 메모"
-                  value={d.rawText}
-                  onChange={(e) =>
-                    updateDesiredCourse(idx, "rawText", e.target.value)
-                  }
-                />
-                <select
-                  value={d.priority || 1}
-                  onChange={(e) =>
-                    updateDesiredCourse(
-                      idx,
-                      "priority",
-                      parseInt(e.target.value),
-                    )
-                  }
+            {pref.desiredCourses.map((d, idx) => {
+              const cs = courseSearches[idx] || {};
+              const displayVal =
+                cs.query !== undefined ? cs.query : d.rawText || "";
+              return (
+                <div
+                  key={idx}
+                  className="desired-course-row"
+                  style={{ alignItems: "flex-start" }}
                 >
-                  {[1, 2, 3].map((p) => (
-                    <option key={p} value={p}>
-                      우선순위 {p}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="btn-danger-sm"
-                  onClick={() => removeDesiredCourse(idx)}
-                >
-                  삭제
-                </button>
-              </div>
-            ))}
+                  <div style={{ flex: 1, position: "relative" }}>
+                    <input
+                      placeholder="과목명 검색 (예: 자료구조)"
+                      value={displayVal}
+                      onChange={(e) => handleCourseSearch(idx, e.target.value)}
+                      onBlur={() =>
+                        setTimeout(
+                          () =>
+                            setCourseSearches((prev) => ({
+                              ...prev,
+                              [idx]: { ...(prev[idx] || {}), open: false },
+                            })),
+                          150,
+                        )
+                      }
+                      style={{ width: "100%" }}
+                    />
+                    {cs.open && cs.results && cs.results.length > 0 && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "100%",
+                          left: 0,
+                          right: 0,
+                          zIndex: 1000,
+                          background: "#fff",
+                          border: "1px solid #ddd",
+                          borderRadius: "4px",
+                          maxHeight: "200px",
+                          overflowY: "auto",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                        }}
+                      >
+                        {cs.results.slice(0, 20).map((l) => (
+                          <div
+                            key={l.id}
+                            style={{
+                              padding: "0.5rem 0.75rem",
+                              cursor: "pointer",
+                              borderBottom: "1px solid #f0f0f0",
+                            }}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              selectCourse(idx, l);
+                            }}
+                          >
+                            <div style={{ fontWeight: 500 }}>
+                              {l.courseName}
+                            </div>
+                            <div style={{ fontSize: "0.8rem", color: "#666" }}>
+                              {l.dept} · {l.category} · {l.credits}학점
+                              {l.professor ? ` · ${l.professor}` : ""}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {d.courseId && (
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "#4caf50",
+                          marginTop: "2px",
+                        }}
+                      >
+                        ✓ {d.rawText} 선택됨
+                      </div>
+                    )}
+                  </div>
+                  <select
+                    value={d.priority || 1}
+                    onChange={(e) =>
+                      updateDesiredCourse(
+                        idx,
+                        "priority",
+                        parseInt(e.target.value),
+                      )
+                    }
+                  >
+                    {[1, 2, 3].map((p) => (
+                      <option key={p} value={p}>
+                        우선순위 {p}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="btn-danger-sm"
+                    onClick={() => removeDesiredCourse(idx)}
+                  >
+                    삭제
+                  </button>
+                </div>
+              );
+            })}
             {pref.desiredCourses.length === 0 && (
               <p className="empty">희망 과목이 없습니다.</p>
             )}

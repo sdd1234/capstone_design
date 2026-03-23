@@ -28,19 +28,23 @@ public record TimetablePreferenceResponse(
         }
     }
 
-    public record CreditPolicyDto(Integer minCredits, Integer maxCredits, Integer targetCredits) {
+    public record CreditPolicyDto(Integer minCredits, Integer maxCredits, Integer targetCredits,
+            Integer targetMajorCredits, Integer targetGeneralCredits, Integer targetRemoteCredits) {
         public static CreditPolicyDto from(CreditPolicy cp) {
             if (cp == null)
                 return null;
-            return new CreditPolicyDto(cp.getMinCredits(), cp.getMaxCredits(), cp.getTargetCredits());
+            return new CreditPolicyDto(cp.getMinCredits(), cp.getMaxCredits(), cp.getTargetCredits(),
+                    cp.getTargetMajorCredits(), cp.getTargetGeneralCredits(), cp.getTargetRemoteCredits());
         }
     }
 
-    public record PreferenceOptionDto(Boolean excludeMorning, Integer allowGapsMinutes, Integer maxDaysPerWeek) {
+    public record PreferenceOptionDto(Boolean excludeMorning, Integer allowGapsMinutes, Integer maxDaysPerWeek,
+            String dept, Boolean preferMajorOnly, Integer grade) {
         public static PreferenceOptionDto from(PreferenceOption po) {
             if (po == null)
                 return null;
-            return new PreferenceOptionDto(po.getExcludeMorning(), po.getAllowGapsMinutes(), po.getMaxDaysPerWeek());
+            return new PreferenceOptionDto(po.getExcludeMorning(), po.getAllowGapsMinutes(), po.getMaxDaysPerWeek(),
+                    po.getDept(), po.getPreferMajorOnly(), po.getGrade());
         }
     }
 

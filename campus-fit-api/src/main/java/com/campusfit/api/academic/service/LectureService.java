@@ -11,4 +11,6 @@ public interface LectureService {
     LectureResponse getById(Long lectureId);
 
     List<PrerequisiteResponse> getPrerequisites(Long courseId);
+
+    List<String> getDepts(Integer year, String termSeason);
 }

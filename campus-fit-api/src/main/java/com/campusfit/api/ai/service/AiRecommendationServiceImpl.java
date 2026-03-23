@@ -68,23 +68,23 @@ public class AiRecommendationServiceImpl implements AiRecommendationService {
             if (!avoidRanges.isEmpty()) {
                 candidates.removeIf(l -> hasScheduleInRanges(l, avoidRanges));
             }
-            // 오전 제외 옵션 처리 (오전 = 12시 이전에 시작하는 강의)
+            // 9시 수업 제외 옵션 처리 (10시 이전에 시작하는 강의)
             if (pref.getPreferenceOption() != null
                     && Boolean.TRUE.equals(pref.getPreferenceOption().getExcludeMorning())) {
                 candidates.removeIf(l -> l.getSchedules().stream()
-                        .anyMatch(s -> s.getStartTime().isBefore(LocalTime.NOON)));
+                        .anyMatch(s -> s.getStartTime().isBefore(LocalTime.of(10, 0))));
             }
         }
 
-        // 희망 강좌 우선 선택
-        List<Lecture> prioritized = new ArrayList<>();
+        // 희망 강좌만 추출 (AI 알고리즘에서 1순위 배치)
+        List<Lecture> desiredLectures = new ArrayList<>();
         if (prefOpt.isPresent()) {
             Set<Long> desiredCourseIds = prefOpt.get().getDesiredCourses().stream()
                     .map(DesiredCourse::getCourseId).filter(Objects::nonNull).collect(Collectors.toSet());
             if (!desiredCourseIds.isEmpty()) {
                 for (Lecture l : candidates) {
                     if (desiredCourseIds.contains(l.getCourse().getId())) {
-                        prioritized.add(l);
+                        desiredLectures.add(l);
                     }
                 }
             }
@@ -92,38 +92,50 @@ public class AiRecommendationServiceImpl implements AiRecommendationService {
         if (request.preferredLectureIds() != null) {
             for (Long id : request.preferredLectureIds()) {
                 candidates.stream().filter(l -> l.getId().equals(id)).findFirst()
-                        .filter(l -> !prioritized.contains(l))
-                        .ifPresent(prioritized::add);
+                        .filter(l -> !desiredLectures.contains(l))
+                        .ifPresent(desiredLectures::add);
             }
         }
 
-        // 나머지 강의에서 충돌 없이 추가
-        for (Lecture l : candidates) {
-            if (!prioritized.contains(l) && !hasConflict(prioritized, l)) {
-                prioritized.add(l);
-            }
-        }
-
-        // 학점 정책 적용
+        // 학점 정책 로드
         int targetCredits = 18;
         int maxCredits = 21;
+        int targetMajorCredits = 0;
+        int targetGeneralCredits = 0;
+        int targetRemoteCredits = 0;
         if (prefOpt.isPresent() && prefOpt.get().getCreditPolicy() != null) {
             CreditPolicy cp = prefOpt.get().getCreditPolicy();
             if (cp.getTargetCredits() != null)
                 targetCredits = cp.getTargetCredits();
             if (cp.getMaxCredits() != null)
                 maxCredits = cp.getMaxCredits();
+            if (cp.getTargetMajorCredits() != null)
+                targetMajorCredits = cp.getTargetMajorCredits();
+            if (cp.getTargetGeneralCredits() != null)
+                targetGeneralCredits = cp.getTargetGeneralCredits();
+            if (cp.getTargetRemoteCredits() != null)
+                targetRemoteCredits = cp.getTargetRemoteCredits();
         }
 
-        // 최대 수강 일수 적용
+        // 전공 우선 및 학과 필터 로드
+        boolean preferMajorOnly = true; // 항상 전공 우선
+        String preferredDept = null;
         int maxDays = 5;
-        if (prefOpt.isPresent() && prefOpt.get().getPreferenceOption() != null
-                && prefOpt.get().getPreferenceOption().getMaxDaysPerWeek() != null) {
-            maxDays = prefOpt.get().getPreferenceOption().getMaxDaysPerWeek();
+        Integer grade = null;
+        if (prefOpt.isPresent() && prefOpt.get().getPreferenceOption() != null) {
+            PreferenceOption po = prefOpt.get().getPreferenceOption();
+            if (po.getDept() != null && !po.getDept().isBlank())
+                preferredDept = po.getDept();
+            if (po.getMaxDaysPerWeek() != null)
+                maxDays = po.getMaxDaysPerWeek();
+            grade = po.getGrade();
         }
 
-        // 목표 학점에 맞게 강의 선택 (3개 후보 생성)
-        List<List<Lecture>> plans = buildPlans(prioritized, targetCredits, maxCredits, maxDays, 5);
+        // 우선순위별 강의 선택: 희망과목 → 전공 → 교양 → 원격 → 나머지 (3개 후보 생성)
+        List<List<Lecture>> plans = buildCategorizedPlans(
+                candidates, desiredLectures, targetCredits, maxCredits, maxDays,
+                targetMajorCredits, targetGeneralCredits, targetRemoteCredits,
+                preferMajorOnly, preferredDept, grade, 3);
 
         for (int i = 0; i < plans.size(); i++) {
             List<Lecture> plan = plans.get(i);
@@ -138,6 +150,165 @@ public class AiRecommendationServiceImpl implements AiRecommendationService {
         }
 
         return RecommendationResponse.from(recommendationRepository.save(rec));
+    }
+
+    /**
+     * 우선순위대로 시간표 후보를 maxPlans건 생성:
+     * 1순위: 희망 수강과목 (desired)
+     * 2순위: 전공 목표학점 채우기 (학과/학년 필터 적용)
+     * 3순위: 교양 목표학점 채우기
+     * 4순위: 원격 목표학점 채우기 (targetRemoteCredits > 0 일 때만)
+     * 5순위: 나머지 학점 채우기 (원격 0목표면 원격 완전 제외)
+     */
+    private List<List<Lecture>> buildCategorizedPlans(
+            List<Lecture> pool, List<Lecture> desired,
+            int target, int max, int maxDays,
+            int targetMajorCredits, int targetGeneralCredits, int targetRemoteCredits,
+            boolean preferMajorOnly, String preferredDept, Integer grade, int maxPlans) {
+
+        List<List<Lecture>> results = new ArrayList<>();
+        List<Lecture> shuffled = new ArrayList<>(pool);
+
+        for (int attempt = 0; attempt < maxPlans * 5 && results.size() < maxPlans; attempt++) {
+            Collections.shuffle(shuffled);
+
+            List<Lecture> plan = new ArrayList<>();
+            int credits = 0;
+            Set<String> days = new HashSet<>();
+
+            // 1단계: 희망 수강과목 최우선 배치
+            for (Lecture l : desired) {
+                if (!plan.contains(l))
+                    credits = tryAddLecture(plan, days, l, credits, max, maxDays);
+            }
+
+            // 2단계: 전공 목표 학점 채우기
+            int majorFill = targetMajorCredits > 0 ? targetMajorCredits
+                    : (preferMajorOnly ? (target * 2) / 3 : 0);
+            if (majorFill > 0) {
+                int majorDone = creditSum(plan.stream().filter(this::isMajor).collect(Collectors.toList()));
+                if (majorDone < majorFill) {
+                    final String dept = preferredDept;
+                    List<Lecture> majorPool = shuffled.stream()
+                            .filter(this::isMajor)
+                            .filter(l -> dept == null || dept.equals(l.getDept()))
+                            .filter(l -> grade == null || l.getTargetGrade() == null
+                                    || l.getTargetGrade().equals(grade))
+                            .filter(l -> !plan.contains(l))
+                            .collect(Collectors.toList());
+                    for (Lecture l : majorPool) {
+                        if (majorDone >= majorFill)
+                            break;
+                        int c = l.getCourse().getCredits() != null ? l.getCourse().getCredits() : 0;
+                        int prev = credits;
+                        credits = tryAddLecture(plan, days, l, credits, max, maxDays);
+                        if (credits > prev)
+                            majorDone += c;
+                    }
+                }
+            }
+
+            // 3단계: 교양 목표 학점 채우기
+            if (targetGeneralCredits > 0) {
+                int genDone = creditSum(plan.stream().filter(this::isGeneral).collect(Collectors.toList()));
+                if (genDone < targetGeneralCredits) {
+                    List<Lecture> generalPool = shuffled.stream()
+                            .filter(this::isGeneral)
+                            .filter(l -> !plan.contains(l))
+                            .collect(Collectors.toList());
+                    for (Lecture l : generalPool) {
+                        if (genDone >= targetGeneralCredits)
+                            break;
+                        int c = l.getCourse().getCredits() != null ? l.getCourse().getCredits() : 0;
+                        int prev = credits;
+                        credits = tryAddLecture(plan, days, l, credits, max, maxDays);
+                        if (credits > prev)
+                            genDone += c;
+                    }
+                }
+            }
+
+            // 4단계: 원격 목표 학점 채우기 (목표 > 0 일 때만)
+            if (targetRemoteCredits > 0) {
+                int remoteDone = creditSum(plan.stream()
+                        .filter(l -> Boolean.TRUE.equals(l.getIsRemote())).collect(Collectors.toList()));
+                if (remoteDone < targetRemoteCredits) {
+                    List<Lecture> remotePool = shuffled.stream()
+                            .filter(l -> Boolean.TRUE.equals(l.getIsRemote()))
+                            .filter(l -> !plan.contains(l))
+                            .collect(Collectors.toList());
+                    for (Lecture l : remotePool) {
+                        if (remoteDone >= targetRemoteCredits)
+                            break;
+                        int c = l.getCourse().getCredits() != null ? l.getCourse().getCredits() : 0;
+                        int prev = credits;
+                        credits = tryAddLecture(plan, days, l, credits, max, maxDays);
+                        if (credits > prev)
+                            remoteDone += c;
+                    }
+                }
+            }
+
+            // 5단계: 나머지 학점 채우기 (원격 목표 0이면 원격 완전 제외; 전공우선이면 전공 먼저)
+            if (credits < target) {
+                boolean excludeRemote = targetRemoteCredits == 0;
+                List<Lecture> fillPool = shuffled.stream()
+                        .filter(l -> !plan.contains(l))
+                        .filter(l -> !excludeRemote || !Boolean.TRUE.equals(l.getIsRemote()))
+                        .collect(Collectors.toList());
+                if (preferMajorOnly) {
+                    fillPool.sort((a, b) -> {
+                        boolean am = isMajor(a), bm = isMajor(b);
+                        return (am == bm) ? 0 : am ? -1 : 1;
+                    });
+                }
+                for (Lecture l : fillPool) {
+                    if (credits >= target)
+                        break;
+                    credits = tryAddLecture(plan, days, l, credits, max, maxDays);
+                }
+            }
+
+            if (!plan.isEmpty()
+                    && results.stream().noneMatch(r -> new HashSet<>(r).equals(new HashSet<>(plan)))) {
+                results.add(plan);
+            }
+        }
+        if (results.isEmpty())
+            results.add(new ArrayList<>(pool.subList(0, Math.min(pool.size(), 6))));
+        return results;
+    }
+
+    private int creditSum(List<Lecture> lectures) {
+        return lectures.stream()
+                .mapToInt(l -> l.getCourse().getCredits() != null ? l.getCourse().getCredits() : 0).sum();
+    }
+
+    /** 강의 추가 시도. 성공 시 누적 학점 반환, 실패 시 기존 학점 반환 */
+    private int tryAddLecture(List<Lecture> plan, Set<String> days, Lecture l, int credits, int max, int maxDays) {
+        int c = l.getCourse().getCredits() != null ? l.getCourse().getCredits() : 0;
+        if (credits + c > max)
+            return credits;
+        Set<String> lecDays = l.getSchedules().stream().map(s -> s.getDayOfWeek().name()).collect(Collectors.toSet());
+        Set<String> combined = new HashSet<>(days);
+        combined.addAll(lecDays);
+        if (combined.size() > maxDays)
+            return credits;
+        if (hasConflict(plan, l))
+            return credits;
+        plan.add(l);
+        days.addAll(lecDays);
+        return credits + c;
+    }
+
+    private boolean isMajor(Lecture l) {
+        String cat = l.getCourse().getCategory();
+        return cat != null && cat.contains("전공");
+    }
+
+    private boolean isGeneral(Lecture l) {
+        String cat = l.getCourse().getCategory();
+        return cat != null && (cat.contains("교양") || cat.contains("교직"));
     }
 
     /** 시간 충돌 없이 목표 학점에 근접하는 강의 조합 최대 maxPlans개 생성 */

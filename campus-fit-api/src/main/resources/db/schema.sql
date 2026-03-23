@@ -101,22 +101,28 @@ CREATE TABLE IF NOT EXISTS desired_courses (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS credit_policies (
-    id            BIGINT NOT NULL AUTO_INCREMENT,
-    preference_id BIGINT NOT NULL,
-    min_credits   INT,
-    max_credits   INT,
-    target_credits INT,
+    id                      BIGINT NOT NULL AUTO_INCREMENT,
+    preference_id           BIGINT NOT NULL,
+    min_credits             INT,
+    max_credits             INT,
+    target_credits          INT,
+    target_major_credits    INT DEFAULT NULL,
+    target_general_credits  INT DEFAULT NULL,
+    target_remote_credits   INT DEFAULT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uq_cp_pref (preference_id),
     CONSTRAINT fk_cp_pref FOREIGN KEY (preference_id) REFERENCES timetable_preferences (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS preference_options (
-    id                BIGINT      NOT NULL AUTO_INCREMENT,
-    preference_id     BIGINT      NOT NULL,
-    exclude_morning   TINYINT(1)  NOT NULL DEFAULT 0,
+    id                 BIGINT      NOT NULL AUTO_INCREMENT,
+    preference_id      BIGINT      NOT NULL,
+    exclude_morning    TINYINT(1)  NOT NULL DEFAULT 0,
     allow_gaps_minutes INT,
     max_days_per_week  INT,
+    dept               VARCHAR(100) DEFAULT NULL,
+    prefer_major_only  TINYINT(1)  NOT NULL DEFAULT 0,
+    grade              INT         DEFAULT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uq_po_pref (preference_id),
     CONSTRAINT fk_po_pref FOREIGN KEY (preference_id) REFERENCES timetable_preferences (id) ON DELETE CASCADE

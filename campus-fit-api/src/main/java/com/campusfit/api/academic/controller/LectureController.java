@@ -56,6 +56,14 @@ public class LectureController {
         return ResponseEntity.ok(ApiResponse.ok(lectureService.getPrerequisites(courseId)));
     }
 
+    @Operation(summary = "개설 학과 목록 조회", description = "해당 연도/학기에 강의가 개설된 학과 목록을 반환합니다.")
+    @GetMapping("/api/v1/lectures/depts")
+    public ResponseEntity<ApiResponse<List<String>>> getDepts(
+            @Parameter(description = "연도", example = "2026") @RequestParam Integer year,
+            @Parameter(description = "학기", example = "SPRING") @RequestParam String termSeason) {
+        return ResponseEntity.ok(ApiResponse.ok(lectureService.getDepts(year, termSeason)));
+    }
+
     @Operation(summary = "엑셀 파일로 강의 일괄 등록 [ADMIN]", description = """
             교양/전공 개설강좌 엑셀 파일(.xlsx)을 업로드하면 강의를 DB에 일괄 등록합니다.
 

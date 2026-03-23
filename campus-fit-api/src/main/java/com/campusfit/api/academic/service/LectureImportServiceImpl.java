@@ -77,6 +77,7 @@ public class LectureImportServiceImpl implements LectureImportService {
                 String lectureNumber = getCellText(row, 2); // Col 3: 강좌번호
                 String courseName = getCellText(row, 3); // Col 4: 교과목명
                 String creditsStr = getCellText(row, 4); // Col 5: 학점
+                String targetGradeStr = getCellText(row, 5); // Col 6: 대상학년
                 String category = getCellText(row, 7); // Col 8: 이수구분
                 String professor = getCellText(row, 9); // Col 10: 담당교수
                 String scheduleRaw = getCellText(row, 13); // Col 14: 강의시간(강의실)
@@ -87,6 +88,7 @@ public class LectureImportServiceImpl implements LectureImportService {
                     continue;
 
                 Integer credits = parseCredits(creditsStr);
+                Integer targetGrade = parseGrade(targetGradeStr);
 
                 // Course 조회 또는 생성 (같은 대학 + 같은 이름)
                 Course course = courseRepository
@@ -117,6 +119,7 @@ public class LectureImportServiceImpl implements LectureImportService {
                         .termSeason(ts)
                         .professor(professor)
                         .dept(dept.isBlank() ? null : dept)
+                        .targetGrade(targetGrade)
                         .room(roomParsed)
                         .lectureNumber(lectureNumber)
                         .area(area)
@@ -186,6 +189,18 @@ public class LectureImportServiceImpl implements LectureImportService {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /** "1학년", "2", "1~2", "1,2" 등에서 첫 번째 숫자(1~4)만 추출 */
+    private Integer parseGrade(String s) {
+        if (s == null || s.isBlank())
+            return null;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("[1-4]").matcher(s.trim());
+        if (m.find()) {
+            int g = Integer.parseInt(m.group());
+            return (g >= 1 && g <= 4) ? g : null;
+        }
+        return null;
     }
 
     private String getCellText(Row row, int colIndex) {

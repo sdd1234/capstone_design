@@ -43,4 +43,10 @@ public class LectureServiceImpl implements LectureService {
                 .orElseThrow(() -> BusinessException.notFound("강좌를 찾을 수 없습니다."));
         return course.getPrerequisites().stream().map(PrerequisiteResponse::from).toList();
     }
+
+    @Override
+    public List<String> getDepts(Integer year, String termSeason) {
+        TermSeason ts = TermSeason.valueOf(termSeason);
+        return lectureRepository.findDistinctDepts(year, ts);
+    }
 }

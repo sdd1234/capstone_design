@@ -59,6 +59,9 @@ public class Lecture {
     @Column(length = 100)
     private String dept;
 
+    /** 대상 학년 (1~4, null이면 학년 무관) */
+    private Integer targetGrade;
+
     @OneToMany(mappedBy = "lecture", cascade = CascadeType.ALL, orphanRemoval = true)
     @BatchSize(size = 50)
     @Builder.Default

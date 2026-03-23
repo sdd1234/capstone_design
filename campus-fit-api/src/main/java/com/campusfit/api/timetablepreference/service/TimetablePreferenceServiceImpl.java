@@ -61,6 +61,9 @@ public class TimetablePreferenceServiceImpl implements TimetablePreferenceServic
                                         .minCredits(req.creditPolicy().minCredits())
                                         .maxCredits(req.creditPolicy().maxCredits())
                                         .targetCredits(req.creditPolicy().targetCredits())
+                                        .targetMajorCredits(req.creditPolicy().targetMajorCredits())
+                                        .targetGeneralCredits(req.creditPolicy().targetGeneralCredits())
+                                        .targetRemoteCredits(req.creditPolicy().targetRemoteCredits())
                                         .build();
                         pref.setCreditPolicy(cp);
                 }
@@ -71,6 +74,9 @@ public class TimetablePreferenceServiceImpl implements TimetablePreferenceServic
                                         .excludeMorning(Boolean.TRUE.equals(req.options().excludeMorning()))
                                         .allowGapsMinutes(req.options().allowGapsMinutes())
                                         .maxDaysPerWeek(req.options().maxDaysPerWeek())
+                                        .dept(req.options().dept())
+                                        .preferMajorOnly(Boolean.TRUE.equals(req.options().preferMajorOnly()))
+                                        .grade(req.options().grade())
                                         .build();
                         pref.setPreferenceOption(po);
                 }
