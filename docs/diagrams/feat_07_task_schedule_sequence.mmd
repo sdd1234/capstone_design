@@ -1,0 +1,62 @@
+%%{init: {"theme": "base", "themeVariables": {"background": "#ffffff", "primaryColor": "#ffffff", "primaryBorderColor": "#000000", "primaryTextColor": "#000000", "secondaryColor": "#ffffff", "secondaryBorderColor": "#000000", "tertiaryColor": "#ffffff", "tertiaryBorderColor": "#000000", "actorBkg": "#ffffff", "actorBorder": "#000000", "actorTextColor": "#000000", "actorLineColor": "#000000", "activationBkgColor": "#ffffff", "activationBorderColor": "#000000", "noteBkgColor": "#ffffff", "noteBorderColor": "#000000", "noteTextColor": "#000000", "sectionBkgColor": "#ffffff", "sectionBkgColor2": "#ffffff", "altSectionBkgColor": "#ffffff", "labelBoxBkgColor": "#ffffff", "labelBoxBorderColor": "#000000", "signalColor": "#000000", "signalTextColor": "#000000", "lineColor": "#000000", "loopTextColor": "#000000"}}}%%
+sequenceDiagram
+  actor User as 사용자
+  participant TP as TaskPage
+  participant ASP as AiSchedulePage
+  participant TAPI as TaskApi
+  participant ASAPI as AiScheduleApi
+  participant TC as TaskController
+  participant TS as TaskService
+  participant ASC as AiScheduleController
+  participant ASS as AiScheduleService
+  participant TCR as TimetableCourseRepository
+  participant TR as TaskRepository
+  participant OAI as OpenAI(GPT)
+  participant ATSR as AiTaskScheduleRepository
+
+  Note over User,ATSR: 1단계 - 할일 등록
+  User->>TP: 할일 추가 (제목, 마감일, 우선순위, 예상소요시간)
+  TP->>TAPI: createTask(data)
+  TAPI->>TC: POST /tasks
+  TC->>TS: createTask(userId, data)
+  TS->>TR: save(task)
+  TR-->>TS: saved
+  TS-->>TC: task
+  TC-->>TAPI: 201 Created
+  TAPI-->>TP: task object
+  TP-->>User: 할일 목록 업데이트
+
+  Note over User,ATSR: 2단계 - AI 스케줄 생성 요청
+  User->>ASP: AI 스케줄 생성 버튼 클릭
+  ASP->>ASAPI: generateSchedule(timetableId)
+  ASAPI->>ASC: POST /ai/task-schedule
+  ASC->>ASS: generateSchedule(userId, timetableId)
+
+  Note over ASS: Step1 - 시간표 강의 시간 로드
+  ASS->>TCR: findByTimetableId(timetableId)
+  TCR-->>ASS: 수업 목록 (요일, 시작시간, 종료시간)
+
+  Note over ASS: Step2 - 빈 시간 블록 계산
+  Note over ASS: 수업 제거 후 09:00-22:00 가용 시간대 추출
+
+  Note over ASS: Step3 - 미완료 할일 로드
+  ASS->>TS: getUserTasks(userId, status=TODO)
+  TS->>TR: findByUserIdAndStatus()
+  TR-->>TS: 할일 목록
+  TS-->>ASS: 할일 목록 (마감일/우선순위/예상시간)
+
+  Note over ASS: Step4 - OpenAI 프롬프트 구성
+  Note over ASS: 빈 슬롯 + 할일 목록을 JSON으로 구성
+
+  ASS->>OAI: Step5 chatCompletion(systemPrompt, userPrompt)
+  Note over OAI: 마감 임박순, 우선순위순으로 빈 시간에 할일 자동 배치
+  OAI-->>ASS: JSON 스케줄 결과 (날짜, 시간, 할일ID)
+
+  Note over ASS: Step6 - 결과 파싱 및 저장
+  ASS->>ATSR: save(scheduleResult)
+  ATSR-->>ASS: saved
+
+  ASS-->>ASC: scheduleResult
+  ASC-->>ASAPI: 200 OK (스케줄 JSON)
+  ASAPI-->>ASP: schedule data
+  ASP-->>User: 시간대별 할일 배치 결과 표시

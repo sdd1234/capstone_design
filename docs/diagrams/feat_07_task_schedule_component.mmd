@@ -1,0 +1,93 @@
+classDiagram
+  namespace Frontend {
+    class TaskPage {
+      <<component>>
+      +listTasks()
+      +addTask(title, deadline, priority, estMin)
+      +editTask(id)
+      +deleteTask(id)
+    }
+    class AiSchedulePage {
+      <<component>>
+      +requestAiSchedule()
+      +displayScheduleResult()
+    }
+    class TaskApi {
+      <<component>>
+      +getTasks()
+      +createTask(data)
+      +updateTask(id, data)
+      +deleteTask(id)
+    }
+    class AiScheduleApi {
+      <<component>>
+      +generateSchedule(timetableId)
+      +getLastSchedule()
+    }
+  }
+  namespace Backend_Task {
+    class TaskController {
+      <<component>>
+      +GET /tasks
+      +POST /tasks
+      +PUT /tasks/id
+      +DELETE /tasks/id
+    }
+    class TaskService {
+      <<component>>
+      +getUserTasks()
+      +createTask()
+      +updateTask()
+      +deleteTask()
+    }
+  }
+  namespace Backend_AI {
+    class AiScheduleController {
+      <<component>>
+      +POST /ai/task-schedule
+      +GET /ai/task-schedule
+    }
+    class AiScheduleService {
+      <<component>>
+      +Step1_loadTimetable()
+      +Step2_extractFreeSlots()
+      +Step3_loadPendingTasks()
+      +Step4_buildPrompt()
+      +Step5_callOpenAI()
+      +Step6_parseAndSave()
+    }
+    class OpenAiClient {
+      <<component>>
+      +chatCompletion(systemPrompt, userPrompt)
+    }
+  }
+  namespace Database {
+    class TaskRepository {
+      <<component>>
+      +findByUserIdAndStatus()
+      +save()
+      +deleteById()
+    }
+    class AiTaskScheduleRepository {
+      <<component>>
+      +save(result)
+      +findLatestByUserId()
+      +deleteByUserId()
+    }
+    class TimetableCourseRepository {
+      <<component>>
+      +findByTimetableId()
+    }
+  }
+  TaskPage ..> TaskApi : use
+  AiSchedulePage ..> AiScheduleApi : use
+  AiSchedulePage ..> TaskApi : read tasks
+  TaskApi ..> TaskController : HTTP-REST
+  AiScheduleApi ..> AiScheduleController : HTTP-REST
+  TaskController ..> TaskService : call
+  AiScheduleController ..> AiScheduleService : call
+  AiScheduleService ..> TaskService : Step3 load tasks
+  AiScheduleService ..> OpenAiClient : Step5 call LLM
+  AiScheduleService ..> TimetableCourseRepository : Step1 query
+  AiScheduleService ..> AiTaskScheduleRepository : Step6 persist
+  TaskService ..> TaskRepository : persist
