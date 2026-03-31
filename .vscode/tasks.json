@@ -2,6 +2,16 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "mysql: start",
+      "type": "shell",
+      "command": "Start-Process",
+      "args": ["-FilePath", "mysqld", "-ArgumentList", "'--defaults-file=\"$(scoop prefix mysql-lts)\\my.ini\"'", "-WindowStyle", "Hidden"],
+      "options": { "shell": { "executable": "powershell.exe", "args": ["-Command"] } },
+      "isBackground": false,
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "label": "backend: run",
       "type": "shell",
       "command": "mvn",
@@ -38,7 +48,7 @@
     },
     {
       "label": "dev: full stack",
-      "dependsOn": ["frontend: install", "backend: run", "frontend: dev"],
+      "dependsOn": ["mysql: start", "frontend: install", "backend: run", "frontend: dev"],
       "dependsOrder": "sequence",
       "problemMatcher": []
     }

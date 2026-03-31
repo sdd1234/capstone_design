@@ -1,14 +1,21 @@
 {
   "recommendations": [
+    // Java / Spring Boot
     "vscjava.vscode-java-pack",
     "vmware.vscode-spring-boot",
     "vscjava.vscode-maven",
+    // Frontend
     "dbaeumer.vscode-eslint",
     "esbenp.prettier-vscode",
     "dsznajder.es7-react-js-snippets",
     "christian-kohler.path-intellisense",
+    // Database
+    "cweijan.vscode-mysql-client2",
+    // API / HTTP
     "humao.rest-client",
+    // Git / DX
     "eamodio.gitlens",
-    "usernamehw.errorlens"
+    "usernamehw.errorlens",
+    "streetsidesoftware.code-spell-checker"
   ]
 }
