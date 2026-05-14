@@ -9,6 +9,7 @@ public record TaskUpdateRequest(
         TaskStatus status,
         LocalDate scheduledDate,
         LocalDateTime dueAt,
+        Integer estimatedMinutes,
         String category,
         LocalDateTime remindAt,
         Long linkedEventId) {

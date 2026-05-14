@@ -35,6 +35,9 @@ public class Task {
 
     private LocalDateTime dueAt;
 
+    /** 예상 소요 시간(분) — AI 추천이 빈 시간에 배치할 때 사용. null이면 추천 대상 외. */
+    private Integer estimatedMinutes;
+
     @Column(length = 50)
     private String category;
 

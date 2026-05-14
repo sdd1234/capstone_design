@@ -8,6 +8,7 @@ public record TaskCreateRequest(
         @NotBlank String title,
         LocalDate scheduledDate,
         LocalDateTime dueAt,
+        Integer estimatedMinutes,
         String category,
         LocalDateTime remindAt,
         Long linkedEventId) {

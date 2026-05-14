@@ -203,10 +203,14 @@ CREATE TABLE IF NOT EXISTS ai_timetable_recommendations (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS recommendation_candidates (
-    id                BIGINT NOT NULL AUTO_INCREMENT,
-    recommendation_id BIGINT NOT NULL,
-    rank              INT    NOT NULL,
+    id                BIGINT       NOT NULL AUTO_INCREMENT,
+    recommendation_id BIGINT       NOT NULL,
+    candidate_rank    INT          NOT NULL,
     total_credits     INT,
+    persona           VARCHAR(30),
+    persona_label     VARCHAR(50),
+    score             DOUBLE,
+    reasons_text      TEXT,
     PRIMARY KEY (id),
     CONSTRAINT fk_rc_rec FOREIGN KEY (recommendation_id) REFERENCES ai_timetable_recommendations (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -265,6 +269,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     status         VARCHAR(15)  NOT NULL DEFAULT 'TODO',
     scheduled_date DATE,
     due_at         DATETIME,
+    estimated_minutes INT      NULL,
     category       VARCHAR(50),
     remind_at      DATETIME,
     linked_event_id BIGINT,
@@ -272,4 +277,39 @@ CREATE TABLE IF NOT EXISTS tasks (
     PRIMARY KEY (id),
     CONSTRAINT fk_task_user  FOREIGN KEY (user_id)         REFERENCES users (id),
     CONSTRAINT fk_task_event FOREIGN KEY (linked_event_id) REFERENCES events (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS activity_goals (
+    id                      BIGINT       NOT NULL AUTO_INCREMENT,
+    user_id                 BIGINT       NOT NULL,
+    title                   VARCHAR(200) NOT NULL,
+    category                VARCHAR(20)  NOT NULL DEFAULT 'OTHER',
+    target_hours_per_week   INT          NOT NULL,
+    preferred_day_of_week   VARCHAR(5),
+    preferred_start_time    TIME,
+    preferred_end_time      TIME,
+    preferred_mode          VARCHAR(10)  NOT NULL DEFAULT 'WINDOW',
+    raw_input               VARCHAR(1000),
+    created_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_ag_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS applied_allocations (
+    id              BIGINT       NOT NULL AUTO_INCREMENT,
+    user_id         BIGINT       NOT NULL,
+    goal_id         BIGINT       NOT NULL,
+    week_start      DATE         NULL,
+    day_of_week     VARCHAR(5)   NOT NULL,
+    start_time      TIME         NOT NULL,
+    end_time        TIME         NOT NULL,
+    is_completed    BOOLEAN      NULL,
+    completed_at    DATETIME     NULL,
+    applied_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_aa_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_aa_goal FOREIGN KEY (goal_id) REFERENCES activity_goals (id) ON DELETE CASCADE,
+    INDEX idx_aa_user (user_id),
+    INDEX idx_aa_user_week (user_id, week_start)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

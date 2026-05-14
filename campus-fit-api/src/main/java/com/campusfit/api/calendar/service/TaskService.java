@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
-@SuppressWarnings("null")
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -40,6 +39,7 @@ public class TaskService {
                 .title(req.title())
                 .scheduledDate(req.scheduledDate())
                 .dueAt(req.dueAt())
+                .estimatedMinutes(req.estimatedMinutes())
                 .category(req.category())
                 .remindAt(req.remindAt())
                 .linkedEvent(linkedEvent)
@@ -67,6 +67,8 @@ public class TaskService {
             task.setScheduledDate(req.scheduledDate());
         if (req.dueAt() != null)
             task.setDueAt(req.dueAt());
+        if (req.estimatedMinutes() != null)
+            task.setEstimatedMinutes(req.estimatedMinutes());
         if (req.category() != null)
             task.setCategory(req.category());
         if (req.remindAt() != null)
