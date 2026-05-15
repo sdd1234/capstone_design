@@ -5,34 +5,16 @@ spring:
   application:
     name: campus-fit-api
 
-  # ── MySQL ────────────────────────────────────────────────────────
-  datasource:
-    url: jdbc:mysql://localhost:3306/campusfit?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    username: campus_user
-    password: campus_pass
-
-  # ── H2 (개발 전용, 필요 시 아래 주석 해제) ────────────────────────
-  # datasource:
-  #   url: jdbc:h2:file:./h2data/campusfit;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;NON_KEYWORDS=VALUE
-  #   driver-class-name: org.h2.Driver
-  #   username: sa
-  #   password:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
   jpa:
-    hibernate:
-      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
         format_sql: false
         globally_quoted_identifiers: true
-
     open-in-view: false
-
-  h2:
-    console:
-      enabled: false
 
   servlet:
     multipart:
@@ -47,9 +29,8 @@ app:
       - http://localhost:5174
   jwt:
     issuer: campus-fit
-    secret: "campus-fit-jwt-secret-key-minimum-256-bits-long-please-change"
-    access-token-minutes: 30
-    refresh-token-days: 14
+    access-token-minutes: ${JWT_ACCESS_MIN:30}
+    refresh-token-days: ${JWT_REFRESH_DAYS:14}
   file:
     upload-dir: uploads/
   excel:

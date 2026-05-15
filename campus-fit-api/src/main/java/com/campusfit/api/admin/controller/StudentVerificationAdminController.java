@@ -22,7 +22,6 @@ import java.util.List;
 
 @Tag(name = "관리자 - 학생 인증 심사", description = "학생 인증 신청 목록 조회·파일 다운로드·승인·반려 API (ADMIN 전용)")
 @SecurityRequirement(name = "BearerAuth")
-@SuppressWarnings("null")
 @RestController
 @RequestMapping("/api/v1/admin/student-verifications")
 @RequiredArgsConstructor

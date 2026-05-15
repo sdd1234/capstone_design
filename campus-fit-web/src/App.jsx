@@ -8,6 +8,7 @@ import SignupPage from "./pages/SignupPage";
 import TimetablePage from "./pages/TimetablePage";
 import CalendarPage from "./pages/CalendarPage";
 import AiRecommendationPage from "./pages/AiRecommendationPage";
+import TimeManagementPage from "./pages/TimeManagementPage";
 import LecturePage from "./pages/LecturePage";
 import ProfilePage from "./pages/ProfilePage";
 import PreferencePage from "./pages/PreferencePage";
@@ -66,6 +67,7 @@ function App() {
           <Route path="/timetable" element={<TimetablePage />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/ai" element={<AiRecommendationPage />} />
+          <Route path="/time-management" element={<TimeManagementPage />} />
           <Route path="/lectures" element={<LecturePage />} />
           <Route
             path="/profile"

@@ -11,4 +11,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     List<Task> findByUserIdAndScheduledDate(Long userId, LocalDate date);
+
+    /** 캘린더 조회용: 사용자 + 예정일 범위 [from, to) */
+    List<Task> findByUserIdAndScheduledDateGreaterThanEqualAndScheduledDateLessThan(
+            Long userId, LocalDate from, LocalDate to);
 }

@@ -181,12 +181,57 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// 공통 에러 로깅
+// 401 자동 refresh — 동시 401 요청은 한 번의 refresh로 묶어서 처리
+let refreshPromise = null;
+
+async function performRefresh() {
+  const refreshToken = localStorage.getItem("refreshToken");
+  if (!refreshToken) throw new Error("no refresh token");
+
+  // 인터셉터를 다시 타지 않도록 axios 인스턴스 자체로 호출하고 _skipAuthRefresh 플래그
+  const res = await apiClient.post(
+    "/api/v1/auth/refresh",
+    { refreshToken },
+    { _skipAuthRefresh: true },
+  );
+  const newAccess = res.data?.data?.accessToken;
+  if (!newAccess) throw new Error("no accessToken in refresh response");
+  localStorage.setItem("accessToken", newAccess);
+  return newAccess;
+}
+
 apiClient.interceptors.response.use(
   (res) => res,
-  (err) => {
+  async (err) => {
+    const original = err.config || {};
+    const status = err.response?.status;
+
+    // refresh 자체 호출이거나 이미 재시도한 요청이면 그대로 실패
+    const isRefreshCall =
+      original._skipAuthRefresh || original.url?.includes("/api/v1/auth/refresh");
+
+    if (status === 401 && !original._retry && !isRefreshCall) {
+      original._retry = true;
+      try {
+        if (!refreshPromise) refreshPromise = performRefresh();
+        const newToken = await refreshPromise;
+        refreshPromise = null;
+        original.headers = original.headers || {};
+        original.headers.Authorization = `Bearer ${newToken}`;
+        return apiClient(original);
+      } catch (refreshErr) {
+        refreshPromise = null;
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        if (typeof window !== "undefined" && window.location?.pathname !== "/login") {
+          window.location.href = "/login";
+        }
+        return Promise.reject(refreshErr);
+      }
+    }
+
     console.error(
-      `[API 오류] ${err.config?.method?.toUpperCase()} ${err.config?.url} → ${err.response?.status || "네트워크 오류"}`,
+      `[API 오류] ${original.method?.toUpperCase()} ${original.url} → ${status || "네트워크 오류"}`,
       err.response?.data || err.message,
     );
     return Promise.reject(err);

@@ -3,7 +3,8 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 const NAV_ITEMS = [
   { to: "/timetable", label: "시간표" },
   { to: "/calendar", label: "캘린더" },
-  { to: "/ai", label: "AI 추천" },
+  { to: "/ai", label: "AI 시간표 추천" },
+  { to: "/time-management", label: "시간 관리" },
   { to: "/lectures", label: "강의 검색" },
   { to: "/preference", label: "수강 설정" },
   { to: "/profile", label: "내 정보" },

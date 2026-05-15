@@ -10,7 +10,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@SuppressWarnings("null")
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -32,8 +31,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception e) {
-        log.error("Unhandled exception: ", e);
+        // 원본 메시지/스택은 서버 로그에만 남기고, 클라이언트에는 일반 메시지만 노출
+        log.error("Unhandled exception", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.fail("서버 오류: " + e.getMessage()));
+                .body(ApiResponse.fail("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."));
     }
 }

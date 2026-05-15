@@ -16,12 +16,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@SuppressWarnings("null")
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -77,7 +77,8 @@ public class LectureImportServiceImpl implements LectureImportService {
                 String lectureNumber = getCellText(row, 2); // Col 3: 강좌번호
                 String courseName = getCellText(row, 3); // Col 4: 교과목명
                 String creditsStr = getCellText(row, 4); // Col 5: 학점
-                String targetGradeStr = getCellText(row, 5); // Col 6: 대상학년
+                // Col 11(index 10): 수강대상 (예: "토목공학과 3년", "간호대 2년")
+                String audienceStr = getCellText(row, 10);
                 String category = getCellText(row, 7); // Col 8: 이수구분
                 String professor = getCellText(row, 9); // Col 10: 담당교수
                 String scheduleRaw = getCellText(row, 13); // Col 14: 강의시간(강의실)
@@ -88,7 +89,11 @@ public class LectureImportServiceImpl implements LectureImportService {
                     continue;
 
                 Integer credits = parseCredits(creditsStr);
-                Integer targetGrade = parseGrade(targetGradeStr);
+                Integer targetGrade = parseGrade(audienceStr);
+                // 수강대상에 학년 표기 없을 경우(예: "수강희망자") 강의명 기반 추정 fallback
+                if (targetGrade == null) {
+                    targetGrade = com.campusfit.api.academic.util.GradeInferrer.inferFromCourseName(courseName);
+                }
 
                 // Course 조회 또는 생성 (같은 대학 + 같은 이름)
                 Course course = courseRepository
@@ -101,12 +106,15 @@ public class LectureImportServiceImpl implements LectureImportService {
                                         .category(category)
                                         .build()));
 
-                // 동일 강좌번호+연도+학기가 이미 있으면 건너뜀
-                boolean exists = lectureRepository
-                        .findByLectureNumberAndYearAndTermSeason(lectureNumber, year, ts)
-                        .isPresent();
-                if (exists)
+                // 동일 강좌번호+연도+학기가 이미 있으면: target_grade가 비어있을 때만 업데이트
+                Optional<Lecture> existing = lectureRepository
+                        .findByLectureNumberAndYearAndTermSeason(lectureNumber, year, ts);
+                if (existing.isPresent()) {
+                    if (existing.get().getTargetGrade() == null && targetGrade != null) {
+                        existing.get().setTargetGrade(targetGrade);
+                    }
                     continue;
+                }
 
                 // 강의시간 파싱
                 List<LectureSchedule> schedules = new ArrayList<>();

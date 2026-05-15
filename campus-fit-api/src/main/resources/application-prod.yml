@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  h2:
+    console:
+      enabled: false
+
+app:
+  jwt:
+    # JWT_SECRET 환경변수 필수 — 미설정 시 기동 실패 (의도된 동작)
+    secret: ${JWT_SECRET}

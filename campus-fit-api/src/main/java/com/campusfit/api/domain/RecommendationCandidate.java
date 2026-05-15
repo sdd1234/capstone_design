@@ -28,6 +28,21 @@ public class RecommendationCandidate {
 
     private Integer totalCredits;
 
+    /** 추천 페르소나 (LIGHT_WEEK / MAJOR_FOCUS / RELAXED) */
+    @Column(length = 30)
+    private String persona;
+
+    /** 페르소나 라벨 (한글 노출용) */
+    @Column(length = 50)
+    private String personaLabel;
+
+    /** TimetableScorer가 계산한 효용 점수 */
+    private Double score;
+
+    /** 추천 사유. 줄바꿈(\n)으로 구분된 텍스트로 저장 */
+    @Lob
+    private String reasonsText;
+
     @ManyToMany
     @JoinTable(name = "recommendation_candidate_lectures", joinColumns = @JoinColumn(name = "candidate_id"), inverseJoinColumns = @JoinColumn(name = "lecture_id"))
     @BatchSize(size = 50)

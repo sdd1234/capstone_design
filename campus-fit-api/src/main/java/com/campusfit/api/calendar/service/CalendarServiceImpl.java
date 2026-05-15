@@ -52,16 +52,14 @@ public class CalendarServiceImpl implements CalendarService {
                     null, null, null));
         }
 
-        List<Task> tasks = taskRepository.findByUserId(userId);
+        List<Task> tasks = taskRepository
+                .findByUserIdAndScheduledDateGreaterThanEqualAndScheduledDateLessThan(
+                        userId, from.toLocalDate(), to.toLocalDate());
         for (Task t : tasks) {
-            if (t.getScheduledDate() != null &&
-                    !t.getScheduledDate().isBefore(from.toLocalDate()) &&
-                    t.getScheduledDate().isBefore(to.toLocalDate())) {
-                items.add(new CalendarItemResponse(
-                        "TASK", t.getId(), t.getTitle(),
-                        null, null, null, null, null,
-                        t.getStatus(), t.getScheduledDate(), t.getDueAt()));
-            }
+            items.add(new CalendarItemResponse(
+                    "TASK", t.getId(), t.getTitle(),
+                    null, null, null, null, null,
+                    t.getStatus(), t.getScheduledDate(), t.getDueAt()));
         }
 
         return items;

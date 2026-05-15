@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-@SuppressWarnings("null")
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -85,14 +84,6 @@ public class AuthServiceImpl implements AuthService {
 
         return new LoginResponse(accessToken, refreshToken, user.getId(), user.getEmail(), user.getName(),
                 user.getRole().name());
-    }
-
-    @Override
-    public void resetPassword(String email, String newPassword) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> BusinessException.badRequest("존재하지 않는 이메일입니다."));
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
     }
 
     @Override

@@ -10,8 +10,3 @@ export const signup = (formData) =>
 
 export const refresh = (refreshToken) =>
   apiClient.post("/api/v1/auth/refresh", { refreshToken });
-
-export const resetPassword = (email, newPassword) => {
-  const params = new URLSearchParams({ email, newPassword });
-  return apiClient.post(`/api/v1/auth/reset-password?${params}`);
-};

@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@SuppressWarnings("null")
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -73,6 +72,15 @@ public class DataInitializer implements ApplicationRunner {
             log.info("✅ 대학교 등록 완료: 계명대학교 (id={})", univ.getId());
         }
 
+        // (one-time migration) target_grade NULL 강의가 많으면 import_logs reset 해
+        // 다음 임포트 단계에서 재실행되도록 한다. 임포트 코드는 exists한 강의의
+        // target_grade가 null이면 엑셀 값으로 업데이트한다.
+        long nullCountBefore = lectureRepository.countByTargetGradeNull();
+        if (nullCountBefore > 20) {
+            log.info("⚠ target_grade NULL 강의 {}건 → import_logs reset 후 재임포트", nullCountBefore);
+            importLogRepository.deleteAll();
+        }
+
         // 3. excel/ 폴더의 .xlsx 파일 자동 스캔 임포트
         importFromExcelDir();
 
@@ -86,6 +94,30 @@ public class DataInitializer implements ApplicationRunner {
 
         // 6. 학사 캘린더 데이터 초기화 (2026년)
         initAcademicCalendar();
+
+        // 7. 기존 강의 중 target_grade가 NULL인 것 강의명 추정으로 backfill
+        backfillTargetGrades();
+    }
+
+    /**
+     * target_grade가 NULL인 기존 강의에 대해 강의명 핵심어로 학년을 추정해 채워넣는다.
+     * Self-invocation 회피를 위해 saveAll로 명시적 flush.
+     */
+    public void backfillTargetGrades() {
+        var nulls = lectureRepository.findAllWithCourseWhereTargetGradeNull();
+        int updated = 0;
+        for (var l : nulls) {
+            Integer inferred = com.campusfit.api.academic.util.GradeInferrer.inferFromCourseName(
+                    l.getCourse() != null ? l.getCourse().getName() : null);
+            if (inferred != null) {
+                l.setTargetGrade(inferred);
+                updated++;
+            }
+        }
+        if (updated > 0) {
+            lectureRepository.saveAll(nulls);
+            log.info("✅ Target grade backfill: {}/{} 건", updated, nulls.size());
+        }
     }
 
     /**
