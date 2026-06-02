@@ -4,9 +4,10 @@ import {
   createRecommendation,
   deleteRecommendation,
 } from "../api/ai";
-import { createTimetable, listTimetables, getTimetable } from "../api/timetable";
+import { createTimetable, listTimetables, getTimetable, setPrimaryTimetable } from "../api/timetable";
 import { getPreference, savePreference } from "../api/preference";
 import { getDepts, listLectures } from "../api/academic";
+import { getCurrentSemester } from "../utils/semester";
 
 const DAY_LABELS = { MON: "월", TUE: "화", WED: "수", THU: "목", FRI: "금" };
 const MINI_DAYS = ["MON", "TUE", "WED", "THU", "FRI"];
@@ -65,9 +66,9 @@ function MiniGrid({ lectures }) {
   );
 }
 
-const emptyForm = {
-  year: 2026,
-  termSeason: "SPRING",
+const makeEmptyForm = () => ({
+  year: getCurrentSemester().year,
+  termSeason: getCurrentSemester().termSeason,
   dept: "",
   grade: null,
   targetMajorCredits: 9,
@@ -78,7 +79,7 @@ const emptyForm = {
   avoidRanges: [], // [{ dayOfWeek, startTime, endTime }]
   // DAY_SENSITIVE
   freeDays: [], // ['MON', 'FRI']
-};
+});
 
 const emptyRefine = {
   extraAvoidRanges: [], // 추가 AVOID
@@ -90,7 +91,7 @@ export default function AiRecommendationPage() {
   const [selected, setSelected] = useState(null);
   const [step, setStep] = useState("select"); // select | form | result
   const [mode, setMode] = useState(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(makeEmptyForm);
   const [refine, setRefine] = useState(emptyRefine);
   const [refineOpen, setRefineOpen] = useState(false);
   const [depts, setDepts] = useState([]);
@@ -124,7 +125,7 @@ export default function AiRecommendationPage() {
 
   const resetAll = () => {
     setMode(null);
-    setForm(emptyForm);
+    setForm(makeEmptyForm());
     setRefine(emptyRefine);
     setRefineOpen(false);
     setSelected(null);
@@ -256,7 +257,17 @@ export default function AiRecommendationPage() {
       setError("학과를 선택해주세요.");
       return;
     }
-    runRecommendation();
+    // 폼에서 미리 고른 '듣고 싶은 강의'를 첫 추천부터 반영
+    runRecommendation([], refine.preferredLectureIds, []);
+  };
+
+  const togglePreferred = (id) => {
+    setRefine((prev) => ({
+      ...prev,
+      preferredLectureIds: prev.preferredLectureIds.includes(id)
+        ? prev.preferredLectureIds.filter((x) => x !== id)
+        : [...prev.preferredLectureIds, id],
+    }));
   };
 
   const handleRefineSubmit = (e) => {
@@ -270,7 +281,7 @@ export default function AiRecommendationPage() {
       return;
     }
     try {
-      const res = await listLectures({ year: form.year, termSeason: form.termSeason, keyword });
+      const res = await listLectures({ universityId: 1, year: form.year, termSeason: form.termSeason, keyword });
       setCourseHits((res.data.data || []).slice(0, 20));
     } catch {
       setCourseHits([]);
@@ -303,15 +314,20 @@ export default function AiRecommendationPage() {
   const handleSaveAsUserTimetable = async (candidate, rec) => {
     setSaveMsg("");
     try {
-      await createTimetable({
+      const res = await createTimetable({
         year: rec.year,
         termSeason: rec.termSeason,
         title: `AI 추천 ${rec.year} ${rec.termSeason} #${candidate.rank}`,
         lectureIds: candidate.lectures.map((l) => l.id),
         sourceRecommendationId: rec.id,
       });
-      setSaveMsg("시간표로 저장되었습니다!");
-      setTimeout(() => setSaveMsg(""), 3000);
+      // 저장과 동시에 해당 학기 '대표(내 학교)' 시간표로 바로 적용
+      const created = res.data?.data;
+      if (created?.id) {
+        await setPrimaryTimetable(created.id);
+      }
+      setSaveMsg("대표 시간표로 적용되었습니다! 시간표 메뉴에서 확인하세요.");
+      setTimeout(() => setSaveMsg(""), 4000);
     } catch (err) {
       setError(err.response?.data?.message || "저장 실패");
     }
@@ -359,26 +375,65 @@ export default function AiRecommendationPage() {
             ))}
           </div>
 
-          {recommendations.length > 0 && (
-            <div style={{ marginTop: 20 }}>
-              <h4 style={{ fontSize: "0.9rem", color: "var(--muted)" }}>이전 추천 기록</h4>
-              {recommendations.slice(0, 5).map((rec) => (
-                <div key={rec.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
-                  <button
-                    type="button"
-                    onClick={() => { setSelected(rec); setStep("result"); }}
-                    style={{ flex: 1, background: "transparent", border: "none", textAlign: "left", cursor: "pointer", padding: 0 }}
-                  >
-                    <span style={{ color: "var(--text)" }}>{rec.year} {rec.termSeason}</span>
-                    <span style={{ color: "var(--muted)", fontSize: "0.78rem", marginLeft: 8 }}>
-                      {rec.createdAt?.slice(0, 10)} · 후보 {rec.candidates?.length}개
-                    </span>
-                  </button>
-                  <button className="btn-danger-sm" onClick={() => handleDelete(rec.id)}>삭제</button>
-                </div>
-              ))}
+          {/* 메인에서 미리 강의 검색·둘러보기 */}
+          <div style={{ marginTop: 20, padding: 14, background: "var(--bg)", borderRadius: 8 }}>
+            <h4 style={{ margin: "0 0 4px" }}>🔍 강의 미리 검색하기</h4>
+            <p style={{ fontSize: "0.78rem", color: "var(--muted)", margin: "0 0 8px" }}>
+              어떤 강의가 있는지 먼저 둘러보세요. 듣고 싶은 강의를 골라두면 위에서 부류를 선택해 추천받을 때 우선 반영됩니다.
+            </p>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+              <input
+                type="number"
+                value={form.year}
+                onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) || form.year })}
+                style={{ width: 90 }}
+                aria-label="연도"
+              />
+              <select value={form.termSeason} onChange={(e) => setForm({ ...form, termSeason: e.target.value })} style={{ width: 110 }} aria-label="학기">
+                <option value="SPRING">1학기</option>
+                <option value="SUMMER">여름학기</option>
+                <option value="FALL">2학기</option>
+                <option value="WINTER">겨울학기</option>
+              </select>
+              <input
+                type="text"
+                value={courseSearch}
+                onChange={handleCourseSearchChange}
+                placeholder="과목명 또는 교수명 (2자 이상)"
+                style={{ flex: 1, minWidth: 180 }}
+              />
             </div>
-          )}
+            {courseHits.length > 0 && (
+              <div style={{ maxHeight: 220, overflowY: "auto", border: "1px solid var(--border)", borderRadius: 4 }}>
+                {courseHits.map((l) => {
+                  const picked = refine.preferredLectureIds.includes(l.id);
+                  return (
+                    <div key={l.id} style={{ padding: "4px 8px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border)" }}>
+                      <span style={{ fontSize: "0.82rem" }}>
+                        <strong>{l.courseName}</strong> · {l.professor} · {l.credits}학점
+                        {l.category && (
+                          <span style={{ fontSize: "0.7rem", color: "var(--muted)", marginLeft: 6 }}>[{l.category}]</span>
+                        )}
+                      </span>
+                      <button
+                        type="button"
+                        className={picked ? "btn-secondary-sm" : "btn-primary-sm"}
+                        onClick={() => togglePreferred(l.id)}
+                      >
+                        {picked ? "해제" : "추가"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {refine.preferredLectureIds.length > 0 && (
+              <div style={{ fontSize: "0.78rem", color: "var(--muted)", marginTop: 6 }}>
+                듣고 싶은 강의 {refine.preferredLectureIds.length}개 선택됨 — 부류를 선택하면 추천에 반영됩니다.
+              </div>
+            )}
+          </div>
+
         </div>
       )}
 
@@ -507,6 +562,52 @@ export default function AiRecommendationPage() {
               </div>
             )}
 
+            {/* 강의 검색 흡수: 듣고 싶은 강의 먼저 고르기 */}
+            <div style={{ marginTop: 16, padding: 12, background: "var(--bg)", borderRadius: 6 }}>
+              <h4 style={{ marginBottom: 4 }}>
+                🔍 듣고 싶은 강의 먼저 고르기{" "}
+                <span style={{ fontWeight: 400, fontSize: "0.75rem", color: "var(--muted)" }}>(선택)</span>
+              </h4>
+              <p style={{ fontSize: "0.75rem", color: "var(--muted)", margin: "0 0 8px" }}>
+                꼭 듣고 싶은 과목·교수를 검색해 추가하면 추천에 우선 반영됩니다. "뭐 들을까" 고민될 때 둘러보세요.
+              </p>
+              <input
+                type="text"
+                value={courseSearch}
+                onChange={handleCourseSearchChange}
+                placeholder="과목명 또는 교수명 (2자 이상)"
+              />
+              {courseHits.length > 0 && (
+                <div style={{ maxHeight: 200, overflowY: "auto", border: "1px solid var(--border)", marginTop: 6, borderRadius: 4 }}>
+                  {courseHits.map((l) => {
+                    const picked = refine.preferredLectureIds.includes(l.id);
+                    return (
+                      <div key={l.id} style={{ padding: "4px 8px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border)" }}>
+                        <span style={{ fontSize: "0.82rem" }}>
+                          <strong>{l.courseName}</strong> · {l.professor} · {l.credits}학점
+                          {l.category && (
+                            <span style={{ fontSize: "0.7rem", color: "var(--muted)", marginLeft: 6 }}>[{l.category}]</span>
+                          )}
+                        </span>
+                        <button
+                          type="button"
+                          className={picked ? "btn-secondary-sm" : "btn-primary-sm"}
+                          onClick={() => togglePreferred(l.id)}
+                        >
+                          {picked ? "해제" : "추가"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {refine.preferredLectureIds.length > 0 && (
+                <div style={{ fontSize: "0.78rem", color: "var(--muted)", marginTop: 6 }}>
+                  듣고 싶은 강의 {refine.preferredLectureIds.length}개 선택됨
+                </div>
+              )}
+            </div>
+
             <div style={{ marginTop: 16 }}>
               <button type="submit" className="btn-primary" disabled={loading}>
                 {loading ? "추천 생성 중..." : "AI 추천 받기"}
@@ -601,14 +702,7 @@ export default function AiRecommendationPage() {
                             <button
                               type="button"
                               className={picked ? "btn-secondary-sm" : "btn-primary-sm"}
-                              onClick={() => {
-                                setRefine({
-                                  ...refine,
-                                  preferredLectureIds: picked
-                                    ? refine.preferredLectureIds.filter((x) => x !== l.id)
-                                    : [...refine.preferredLectureIds, l.id],
-                                });
-                              }}
+                              onClick={() => togglePreferred(l.id)}
                             >
                               {picked ? "해제" : "추가"}
                             </button>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { signup } from "../api/auth";
+import { GraduationCap, UserPlus } from "lucide-react";
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -49,7 +50,10 @@ export default function SignupPage() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h1>Campus Fit</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+          <GraduationCap size={28} color="#6366f1" />
+          <h1>Campus Fit</h1>
+        </div>
         <h2>회원가입</h2>
         {success && <p className="success">{success}</p>}
         <form onSubmit={handleSubmit}>
@@ -127,6 +131,7 @@ export default function SignupPage() {
           {error && <p className="error">{error}</p>}
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? "처리 중..." : "회원가입"}
+            {!loading && <UserPlus size={16} />}
           </button>
         </form>
         <p className="auth-link">

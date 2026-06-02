@@ -1,43 +1,26 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { listTimetables } from "../api/timetable";
 import {
-  listTimetables,
-  createTimetable,
-  deleteTimetable,
-} from "../api/timetable";
-import { listLectures } from "../api/academic";
+  listPersonalBlocks,
+  createPersonalBlock,
+  deletePersonalBlock,
+} from "../api/personalBlock";
+import { getCurrentSemester } from "../utils/semester";
 
-const SEMESTER_OPTIONS = [
-  { label: "2026 1학기", year: 2026, termSeason: "SPRING" },
-  { label: "2026 여름방학", year: 2026, termSeason: "SUMMER" },
-  { label: "2026 2학기", year: 2026, termSeason: "FALL" },
-  { label: "2026 겨울방학", year: 2026, termSeason: "WINTER" },
-  { label: "2025 2학기", year: 2025, termSeason: "FALL" },
-  { label: "2025 1학기", year: 2025, termSeason: "SPRING" },
-];
-const TERM_LABELS = {
-  SPRING: "1학기",
-  SUMMER: "여름방학",
-  FALL: "2학기",
-  WINTER: "겨울방학",
-};
-const DAY_LABELS = { MON: "월", TUE: "화", WED: "수", THU: "목", FRI: "금" };
-const DAYS_ORDER = ["MON", "TUE", "WED", "THU", "FRI"];
+const DAY_LABELS = { MON: "월", TUE: "화", WED: "수", THU: "목", FRI: "금", SAT: "토", SUN: "일" };
+const DAYS_ORDER = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 9); // 9~22시
 const CELL_H = 52;
+const COL_W = 90;
+const TIME_W = 60;
 const COLORS = [
-  "#4f9cf9",
-  "#f97c4f",
-  "#4fc97a",
-  "#c94fb8",
-  "#f9c74f",
-  "#a04fc9",
-  "#4fc9c9",
-  "#f94f4f",
-  "#9cf94f",
-  "#4fc9f9",
+  "#4f9cf9", "#f97c4f", "#4fc97a", "#c94fb8", "#f9c74f",
+  "#a04fc9", "#4fc9c9", "#f94f4f", "#9cf94f", "#4fc9f9",
 ];
+const PB_COLORS = ["#f97c4f", "#4fc97a", "#4f9cf9", "#c94fb8", "#a04fc9", "#64748b"];
 
-function LecBlock({ lec, idx, opacity = 1, dashed = false, prefix = "lec" }) {
+function LecBlock({ lec, idx }) {
   return (lec.schedules || []).map((s, si) => {
     const dayIndex = DAYS_ORDER.indexOf(s.dayOfWeek);
     if (dayIndex < 0) return null;
@@ -48,17 +31,15 @@ function LecBlock({ lec, idx, opacity = 1, dashed = false, prefix = "lec" }) {
     if (top < 0 || top > HOURS.length * CELL_H) return null;
     return (
       <div
-        key={`${prefix}-${lec.id}-${si}`}
+        key={`lec-${lec.id}-${si}`}
         className="lecture-block"
         style={{
           top: `${top}px`,
-          left: `${60 + dayIndex * 90}px`,
-          width: "86px",
+          left: `${TIME_W + dayIndex * COL_W}px`,
+          width: `${COL_W - 4}px`,
           height: `${height}px`,
           backgroundColor: COLORS[idx % COLORS.length],
-          opacity,
-          border: dashed ? "2px dashed rgba(0,0,0,0.3)" : "none",
-          zIndex: opacity < 1 ? 5 : 2,
+          zIndex: 2,
         }}
       >
         <div className="lec-name">{lec.courseName}</div>
@@ -68,375 +49,255 @@ function LecBlock({ lec, idx, opacity = 1, dashed = false, prefix = "lec" }) {
   });
 }
 
-function TimetableGrid({ lectures, previewLectures = [], hoverLec = null }) {
-  const baseCount = (lectures || []).length;
+function PBlock({ block, onDelete }) {
+  const dayIndex = DAYS_ORDER.indexOf(block.dayOfWeek);
+  if (dayIndex < 0) return null;
+  const [sh, sm] = block.startTime.split(":").map(Number);
+  const [eh, em] = block.endTime.split(":").map(Number);
+  const top = (sh - 9 + sm / 60) * CELL_H;
+  const height = Math.max((eh - sh + (em - sm) / 60) * CELL_H, 24);
+  if (top < 0 || top > HOURS.length * CELL_H) return null;
+  return (
+    <div
+      className="lecture-block"
+      style={{
+        top: `${top}px`,
+        left: `${TIME_W + dayIndex * COL_W}px`,
+        width: `${COL_W - 4}px`,
+        height: `${height}px`,
+        backgroundColor: block.color || "#64748b",
+        border: "2px dashed rgba(255,255,255,0.7)",
+        zIndex: 3,
+      }}
+    >
+      <button
+        type="button"
+        title="삭제"
+        onClick={() => onDelete(block.id)}
+        style={{
+          position: "absolute", top: 1, right: 3, background: "transparent",
+          border: "none", color: "#fff", cursor: "pointer", fontSize: "0.8rem", lineHeight: 1, padding: 0,
+        }}
+      >
+        ✕
+      </button>
+      <div className="lec-name">{block.title}</div>
+      <div className="lec-room">{block.startTime?.slice(0, 5)}~{block.endTime?.slice(0, 5)}</div>
+    </div>
+  );
+}
+
+function TimetableGrid({ lectures, personalBlocks, onDeleteBlock }) {
   return (
     <div className="timetable-grid">
       <div className="grid-header">
-        <div className="time-col" />
-        {["월", "화", "수", "목", "금"].map((d) => (
-          <div key={d} className="day-col">
-            {d}
+        <div className="time-col" style={{ width: TIME_W }} />
+        {DAYS_ORDER.map((d) => (
+          <div
+            key={d}
+            className="day-col"
+            style={d === "SAT" ? { color: "#4f9cf9" } : d === "SUN" ? { color: "#f94f4f" } : undefined}
+          >
+            {DAY_LABELS[d]}
           </div>
         ))}
       </div>
       <div
         className="grid-body"
-        style={{ position: "relative", height: `${HOURS.length * CELL_H}px` }}
+        style={{ position: "relative", height: `${HOURS.length * CELL_H}px`, minWidth: `${TIME_W + DAYS_ORDER.length * COL_W}px` }}
       >
         {HOURS.map((h) => (
-          <div
-            key={h}
-            className="hour-row"
-            style={{ top: `${(h - 9) * CELL_H}px` }}
-          >
+          <div key={h} className="hour-row" style={{ top: `${(h - 9) * CELL_H}px` }}>
             <span className="hour-label">{h}:00</span>
           </div>
         ))}
         {(lectures || []).map((lec, idx) => (
           <LecBlock key={lec.id} lec={lec} idx={idx} />
         ))}
-        {previewLectures.map((lec, i) => (
-          <LecBlock
-            key={lec.id}
-            lec={lec}
-            idx={baseCount + i}
-            opacity={0.55}
-            dashed={true}
-            prefix="checked"
-          />
+        {(personalBlocks || []).map((b) => (
+          <PBlock key={`pb-${b.id}`} block={b} onDelete={onDeleteBlock} />
         ))}
-        {hoverLec && (
-          <LecBlock
-            key={hoverLec.id}
-            lec={hoverLec}
-            idx={baseCount + previewLectures.length}
-            opacity={0.35}
-            dashed={true}
-            prefix="hover"
-          />
-        )}
       </div>
     </div>
   );
 }
 
-function parseSemKey(k) {
-  try {
-    const [y, t] = k.split("_");
-    return { year: parseInt(y), termSeason: t };
-  } catch {
-    return { year: 2026, termSeason: "SPRING" };
-  }
-}
-function makeSemKey(year, termSeason) {
-  return `${year}_${termSeason}`;
-}
-
 export default function TimetablePage() {
-  const initKey = localStorage.getItem("tt_semkey") || "2026_SPRING";
-  const initSem = parseSemKey(initKey);
+  const sem = getCurrentSemester();
   const [timetables, setTimetables] = useState([]);
-  const [semKey, setSemKey] = useState(initKey);
-  const { year: selYear, termSeason: selectedTerm } = parseSemKey(semKey);
-  const [selected, setSelected] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
-    year: initSem.year,
-    termSeason: initSem.termSeason,
-  });
-  const [lectures, setLectures] = useState([]);
-  const [selectedLecIds, setSelectedLecIds] = useState([]);
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [hoverLec, setHoverLec] = useState(null);
+  const [personalBlocks, setPersonalBlocks] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const filtered = timetables.filter(
-    (t) => t.year === selYear && t.termSeason === selectedTerm,
-  );
+  const [showForm, setShowForm] = useState(false);
+  const [blockForm, setBlockForm] = useState({
+    title: "",
+    dayOfWeek: "MON",
+    startTime: "18:00",
+    endTime: "22:00",
+    color: PB_COLORS[0],
+  });
 
   useEffect(() => {
-    loadTimetables();
+    loadAll();
   }, []);
 
-  useEffect(() => {
-    const savedId = localStorage.getItem(`tt_sel_${selYear}_${selectedTerm}`);
-    const match =
-      filtered.find((t) => String(t.id) === savedId) || filtered[0] || null;
-    setSelected(match);
-  }, [semKey, timetables]); // eslint-disable-line
-
-  const loadTimetables = async () => {
+  const loadAll = async () => {
     try {
-      const res = await listTimetables();
-      setTimetables(res.data.data || []);
+      const [ttRes, pbRes] = await Promise.all([
+        listTimetables(),
+        listPersonalBlocks(sem.year, sem.termSeason),
+      ]);
+      setTimetables(ttRes.data.data || []);
+      setPersonalBlocks(pbRes.data.data || []);
     } catch (err) {
       const status = err.response?.status;
-      const msg =
-        err.response?.data?.message || err.message || "알 수 없는 오류";
-      console.error("시간표 로드 실패:", err);
-      if (status === 401) {
-        setError("로그인이 필요합니다. (401)");
-      } else {
-        setError(
-          `시간표를 불러오지 못했습니다. [${status || "네트워크 오류"}] ${msg}`,
-        );
-      }
+      const msg = err.response?.data?.message || err.message || "알 수 없는 오류";
+      if (status === 401) setError("로그인이 필요합니다. (401)");
+      else setError(`불러오지 못했습니다. [${status || "네트워크 오류"}] ${msg}`);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSemChange = (key) => {
-    setSemKey(key);
-    localStorage.setItem("tt_semkey", key);
-    const sem = parseSemKey(key);
-    setForm((f) => ({ ...f, year: sem.year, termSeason: sem.termSeason }));
-  };
-
-  const handleSelectTt = (t) => {
-    setSelected(t);
-    localStorage.setItem(`tt_sel_${t.year}_${t.termSeason}`, String(t.id));
-  };
-
-  const handleSearchLectures = async () => {
+  const reloadBlocks = async () => {
     try {
-      const res = await listLectures({
-        universityId: 1,
-        year: form.year,
-        termSeason: form.termSeason,
-        keyword: searchKeyword || undefined,
-      });
-      setLectures(res.data.data || []);
+      const res = await listPersonalBlocks(sem.year, sem.termSeason);
+      setPersonalBlocks(res.data.data || []);
     } catch {
-      setLectures([]);
+      /* ignore */
     }
   };
 
-  const toggleLecture = (id) => {
-    setSelectedLecIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
-    );
-  };
-
-  const handleCreate = async (e) => {
+  const handleCreateBlock = async (e) => {
     e.preventDefault();
     setError("");
     try {
-      const res = await createTimetable({
-        ...form,
-        lectureIds: selectedLecIds,
+      await createPersonalBlock({
+        year: sem.year,
+        termSeason: sem.termSeason,
+        title: blockForm.title.trim(),
+        dayOfWeek: blockForm.dayOfWeek,
+        startTime: blockForm.startTime,
+        endTime: blockForm.endTime,
+        color: blockForm.color,
       });
-      const created = res.data?.data;
       setShowForm(false);
-      setSelectedLecIds([]);
-      setLectures([]);
-      setHoverLec(null);
-      const newKey = makeSemKey(form.year, form.termSeason);
-      setSemKey(newKey);
-      localStorage.setItem("tt_semkey", newKey);
-      if (created) {
-        localStorage.setItem(
-          `tt_sel_${form.year}_${form.termSeason}`,
-          String(created.id),
-        );
-        setTimetables((prev) => [
-          created,
-          ...prev.filter((t) => t.id !== created.id),
-        ]);
-      }
+      setBlockForm((f) => ({ ...f, title: "" }));
+      reloadBlocks();
     } catch (err) {
-      setError(err.response?.data?.message || "시간표 생성 실패");
+      setError(err.response?.data?.message || "개인 일정 추가 실패");
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("삭제하시겠습니까?")) return;
+  const handleDeleteBlock = async (id) => {
+    if (!window.confirm("이 개인 일정을 삭제할까요?")) return;
     try {
-      await deleteTimetable(id);
-      const next = timetables.filter((t) => t.id !== id);
-      setTimetables(next);
-      if (selected?.id === id) {
-        const nextFiltered = next.filter(
-          (t) => t.year === selYear && t.termSeason === selectedTerm,
-        );
-        setSelected(nextFiltered[0] || null);
-      }
-    } catch {
-      setError("삭제 실패");
+      await deletePersonalBlock(id);
+      reloadBlocks();
+    } catch (err) {
+      setError(err.response?.data?.message || "삭제 실패");
     }
   };
+
+  // 현재 학기 시간표 중 '대표' 우선, 없으면 가장 최근(목록은 서버에서 createdAt desc 정렬)
+  const inSemester = timetables.filter(
+    (t) => t.year === sem.year && t.termSeason === sem.termSeason,
+  );
+  const active = inSemester.find((t) => t.isPrimary) || inSemester[0] || null;
+  const totalCredits = (active?.lectures || []).reduce((s, l) => s + (l.credits || 0), 0);
 
   return (
     <div className="page-container">
       <div className="page-header">
         <h2>시간표</h2>
-        <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
-          {showForm ? "취소" : "+ 새 시간표"}
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span className="sem-badge">{sem.label}</span>
+          <button className="btn-primary" onClick={() => setShowForm((v) => !v)}>
+            {showForm ? "취소" : "+ 개인 일정"}
+          </button>
+        </div>
       </div>
 
       {error && <p className="error">{error}</p>}
 
-      {/* Semester Selector */}
-      <div className="semester-selector">
-        <label className="sem-label">학기 선택</label>
-        <select
-          className="sem-select"
-          value={semKey}
-          onChange={(e) => handleSemChange(e.target.value)}
-        >
-          {SEMESTER_OPTIONS.map(({ label, year, termSeason }) => (
-            <option
-              key={`${year}_${termSeason}`}
-              value={`${year}_${termSeason}`}
-            >
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
-
       {showForm && (
-        <div className="card">
-          <h3>새 시간표 만들기</h3>
-          <form onSubmit={handleCreate} className="form-grid">
-            <div className="field">
-              <label>연도</label>
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0 }}>알바·개인 일정 추가</h3>
+          <p style={{ fontSize: "0.8rem", color: "var(--muted)", marginTop: 0 }}>
+            매주 반복되는 일정으로 추가됩니다. (강의 시간표가 없어도 추가 가능)
+          </p>
+          <form onSubmit={handleCreateBlock} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div className="field" style={{ flex: "2 1 180px" }}>
+              <label>제목</label>
               <input
-                type="number"
-                value={form.year}
-                onChange={(e) =>
-                  setForm({ ...form, year: parseInt(e.target.value) })
-                }
+                value={blockForm.title}
+                onChange={(e) => setBlockForm({ ...blockForm, title: e.target.value })}
+                placeholder="예: 카페 알바"
+                required
               />
             </div>
             <div className="field">
-              <label>학기</label>
-              <select
-                value={form.termSeason}
-                onChange={(e) =>
-                  setForm({ ...form, termSeason: e.target.value })
-                }
-              >
-                <option value="SPRING">1학기</option>
-                <option value="SUMMER">여름방학</option>
-                <option value="FALL">2학기</option>
-                <option value="WINTER">겨울방학</option>
+              <label>요일</label>
+              <select value={blockForm.dayOfWeek} onChange={(e) => setBlockForm({ ...blockForm, dayOfWeek: e.target.value })}>
+                {DAYS_ORDER.map((d) => <option key={d} value={d}>{DAY_LABELS[d]}</option>)}
               </select>
             </div>
-          </form>
-          <div className="lecture-search">
-            <div className="search-row">
-              <input
-                placeholder="강의명 검색"
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-              />
-              <button className="btn-secondary" onClick={handleSearchLectures}>
-                검색
-              </button>
+            <div className="field">
+              <label>시작</label>
+              <input type="time" value={blockForm.startTime} onChange={(e) => setBlockForm({ ...blockForm, startTime: e.target.value })} required />
             </div>
-            {lectures.length > 0 && (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>선택</th>
-                    <th>강의명</th>
-                    <th>교수</th>
-                    <th>학점</th>
-                    <th>시간</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lectures.map((l) => (
-                    <tr
-                      key={l.id}
-                      className={
-                        selectedLecIds.includes(l.id) ? "selected" : ""
-                      }
-                      onMouseEnter={() => setHoverLec(l)}
-                      onMouseLeave={() => setHoverLec(null)}
-                    >
-                      <td>
-                        <input
-                          type="checkbox"
-                          checked={selectedLecIds.includes(l.id)}
-                          onChange={() => toggleLecture(l.id)}
-                        />
-                      </td>
-                      <td>{l.courseName}</td>
-                      <td>{l.professor || "-"}</td>
-                      <td>{l.credits}</td>
-                      <td>
-                        {(l.schedules || []).map((s, i) => (
-                          <span key={i}>
-                            {DAY_LABELS[s.dayOfWeek]} {s.startTime}~
-                            {s.endTime}{" "}
-                          </span>
-                        ))}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-          <div className="form-actions">
-            <button
-              type="submit"
-              className="btn-primary"
-              onClick={handleCreate}
-            >
-              저장
-            </button>
-          </div>
+            <div className="field">
+              <label>종료</label>
+              <input type="time" value={blockForm.endTime} onChange={(e) => setBlockForm({ ...blockForm, endTime: e.target.value })} required />
+            </div>
+            <div className="field">
+              <label>색상</label>
+              <div style={{ display: "flex", gap: 6 }}>
+                {PB_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setBlockForm({ ...blockForm, color: c })}
+                    aria-label={`색상 ${c}`}
+                    style={{
+                      width: 22, height: 22, borderRadius: "50%", background: c, cursor: "pointer",
+                      border: blockForm.color === c ? "3px solid var(--text)" : "2px solid var(--border)",
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+            <button type="submit" className="btn-primary">추가</button>
+          </form>
         </div>
       )}
 
-      <div className="timetable-layout">
-        <div className="timetable-list">
-          {filtered.map((t) => (
-            <div
-              key={t.id}
-              className={`timetable-item ${selected?.id === t.id ? "active" : ""}`}
-              onClick={() => handleSelectTt(t)}
-            >
-              <div className="tt-title">{t.title}</div>
-              <div className="tt-meta">
-                {t.year} {TERM_LABELS[t.termSeason] || t.termSeason} ·{" "}
-                {(t.lectures || []).length}강의
-              </div>
-              <button
-                className="btn-danger-sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(t.id);
-                }}
-              >
-                삭제
-              </button>
-            </div>
-          ))}
-          {filtered.length === 0 && (
-            <p className="empty">이 학기의 시간표가 없습니다.</p>
-          )}
-        </div>
-        <div className="timetable-view">
-          {selected && <h3>{selected.title}</h3>}
+      {!loading && (
+        <div className="timetable-view" style={{ marginTop: 8 }}>
+          <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {active ? (
+              <>
+                {active.title}
+                {active.isPrimary && <span className="primary-badge">대표</span>}
+                <span style={{ fontSize: "0.8rem", fontWeight: 400, color: "var(--muted)" }}>
+                  · {(active.lectures || []).length}강의 · {totalCredits}학점
+                </span>
+              </>
+            ) : (
+              <span style={{ fontSize: "0.9rem", fontWeight: 400, color: "var(--muted)" }}>
+                {sem.label} 강의 시간표 없음 — <Link to="/ai" style={{ color: "var(--primary)", fontWeight: 600 }}>AI 추천</Link> 또는{" "}
+                <Link to="/profile" style={{ color: "var(--primary)", fontWeight: 600 }}>내 정보 &gt; 내 시간표</Link>에서 등록 · 아래 그리드에 개인 일정은 바로 추가할 수 있어요
+              </span>
+            )}
+          </h3>
           <TimetableGrid
-            lectures={selected ? selected.lectures : []}
-            previewLectures={
-              showForm
-                ? lectures.filter((l) => selectedLecIds.includes(l.id))
-                : []
-            }
-            hoverLec={
-              showForm && hoverLec && !selectedLecIds.includes(hoverLec.id)
-                ? hoverLec
-                : null
-            }
+            lectures={active ? active.lectures : []}
+            personalBlocks={personalBlocks}
+            onDeleteBlock={handleDeleteBlock}
           />
         </div>
-      </div>
+      )}
     </div>
   );
 }

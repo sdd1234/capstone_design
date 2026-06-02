@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { login } from "../api/auth";
+import { GraduationCap, ArrowRight, Zap } from "lucide-react";
 
 export default function LoginPage({ onLogin }) {
   const navigate = useNavigate();
@@ -29,7 +30,6 @@ export default function LoginPage({ onLogin }) {
     }
   };
 
-  // 테스트 로그인
   const handleTestLogin = async () => {
     setLoading(true);
     setError("");
@@ -50,8 +50,11 @@ export default function LoginPage({ onLogin }) {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h1>Campus Fit</h1>
-        <h2>로그인</h2>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+          <GraduationCap size={28} color="#6366f1" />
+          <h1>Campus Fit</h1>
+        </div>
+        <h2>AI 기반 시간표 추천 플랫폼</h2>
         <form onSubmit={handleSubmit}>
           <div className="field">
             <label>이메일</label>
@@ -78,6 +81,7 @@ export default function LoginPage({ onLogin }) {
           {error && <p className="error">{error}</p>}
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? "로그인 중..." : "로그인"}
+            {!loading && <ArrowRight size={16} />}
           </button>
         </form>
         <button
@@ -86,17 +90,24 @@ export default function LoginPage({ onLogin }) {
           style={{
             width: "100%",
             padding: "10px 16px",
-            background: "#f0f0f0",
-            border: "1px solid #ddd",
-            borderRadius: 8,
+            background: "linear-gradient(135deg, #f0f9ff, #eef2ff)",
+            border: "1.5px solid #c7d2fe",
+            borderRadius: 10,
             cursor: "pointer",
-            fontSize: "0.9rem",
-            fontWeight: 500,
+            fontSize: "0.88rem",
+            fontWeight: 600,
             marginTop: 16,
             marginBottom: 16,
+            color: "#4f46e5",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            transition: "all 0.2s",
           }}
         >
-          🚀 테스트 로그인 (admin@campusfit.com)
+          <Zap size={15} />
+          데모 로그인
         </button>
         <p className="auth-link">
           계정이 없으신가요? <Link to="/signup">회원가입</Link>

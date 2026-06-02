@@ -62,6 +62,15 @@ public class TimetableController {
         return ResponseEntity.ok(ApiResponse.ok(timetableService.get(userId, timetableId)));
     }
 
+    @Operation(summary = "대표 시간표 지정", description = "해당 시간표를 그 학기의 '대표(내 학교)' 시간표로 지정합니다. 같은 학기의 다른 시간표 대표 표시는 자동 해제됩니다.")
+    @PatchMapping("/{timetableId}/primary")
+    public ResponseEntity<ApiResponse<TimetableResponse>> setPrimary(
+            @Parameter(description = "시간표 ID") @PathVariable Long timetableId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = Long.valueOf(userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.ok(timetableService.setPrimary(userId, timetableId)));
+    }
+
     @Operation(summary = "시간표 삭제", description = "시간표와 담긴 강의 항목을 전체 삭제합니다.")
     @DeleteMapping("/{timetableId}")
     public ResponseEntity<ApiResponse<Void>> delete(

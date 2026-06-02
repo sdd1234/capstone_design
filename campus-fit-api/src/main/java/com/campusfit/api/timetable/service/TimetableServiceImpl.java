@@ -101,6 +101,17 @@ public class TimetableServiceImpl implements TimetableService {
     }
 
     @Override
+    public TimetableResponse setPrimary(Long userId, Long timetableId) {
+        Timetable target = findOwned(userId, timetableId);
+        // 같은 학기 모든 시간표의 대표 표시 해제 후 대상만 대표로 (target도 목록에 포함되므로 순서 주의)
+        List<Timetable> sameSemester = timetableRepository.findByUserIdAndYearAndTermSeason(
+                userId, target.getYear(), target.getTermSeason());
+        sameSemester.forEach(t -> t.setIsPrimary(false));
+        target.setIsPrimary(true);
+        return TimetableResponse.from(target);
+    }
+
+    @Override
     public void delete(Long userId, Long timetableId) {
         timetableRepository.delete(findOwned(userId, timetableId));
     }

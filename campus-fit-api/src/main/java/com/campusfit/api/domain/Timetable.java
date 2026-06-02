@@ -43,6 +43,10 @@ public class Timetable {
 
     private Long sourceRecommendationId;
 
+    /** 해당 학기의 '대표(내 학교)' 시간표 여부. 학기당 최대 1개. columnDefinition 미사용(globally_quoted 충돌 회피) → 기존 행은 NULL, 조회 시 false 취급. */
+    @Builder.Default
+    private Boolean isPrimary = false;
+
     @OneToMany(mappedBy = "timetable", cascade = CascadeType.ALL, orphanRemoval = true)
     @BatchSize(size = 50)
     @Builder.Default

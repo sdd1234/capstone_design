@@ -13,6 +13,7 @@ public record TimetableResponse(
         TermSeason termSeason,
         String title,
         TimetableStatus status,
+        Boolean isPrimary,
         Long sourceRecommendationId,
         List<LectureResponse> lectures,
         LocalDateTime createdAt) {
@@ -23,6 +24,7 @@ public record TimetableResponse(
                 t.getTermSeason(),
                 t.getTitle(),
                 t.getStatus(),
+                Boolean.TRUE.equals(t.getIsPrimary()),
                 t.getSourceRecommendationId(),
                 t.getItems().stream().map(item -> LectureResponse.from(item.getLecture())).toList(),
                 t.getCreatedAt());

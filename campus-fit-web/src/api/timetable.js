@@ -8,3 +8,5 @@ export const patchTimetable = (id, data) =>
   apiClient.patch(`/api/v1/timetables/${id}`, data);
 export const deleteTimetable = (id) =>
   apiClient.delete(`/api/v1/timetables/${id}`);
+export const setPrimaryTimetable = (id) =>
+  apiClient.patch(`/api/v1/timetables/${id}/primary`);
