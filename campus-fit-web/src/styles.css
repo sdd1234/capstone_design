@@ -939,6 +939,8 @@ pre {
   cursor: pointer;
   transition: background var(--transition);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .cal-cell:nth-child(7n) { border-right: none; }
 .cal-cell.active-cell:hover { background: var(--primary-light); }
