@@ -57,8 +57,8 @@ function LecBlock({ lec, idx, colW }) {
         className="lecture-block"
         style={{
           top: `${top}px`,
-          left: `${TIME_W + dayIndex * colW}px`,
-          width: `${colW - 4}px`,
+          left: `calc(${TIME_W}px + ${dayIndex} * ((100% - ${TIME_W}px) / 7))`,
+          width: `calc((100% - ${TIME_W}px) / 7 - 4px)`,
           height: `${height}px`,
           backgroundColor: COLORS[idx % COLORS.length],
           zIndex: 2,
@@ -84,8 +84,8 @@ function PBlock({ block, onDelete, colW }) {
       className="lecture-block"
       style={{
         top: `${top}px`,
-        left: `${TIME_W + dayIndex * colW}px`,
-        width: `${colW - 4}px`,
+        left: `calc(${TIME_W}px + ${dayIndex} * ((100% - ${TIME_W}px) / 7))`,
+        width: `calc((100% - ${TIME_W}px) / 7 - 4px)`,
         height: `${height}px`,
         backgroundColor: block.color || "#64748b",
         border: "2px dashed rgba(255,255,255,0.7)",
@@ -120,18 +120,16 @@ function PBlock({ block, onDelete, colW }) {
 }
 
 function TimetableGrid({ lectures, personalBlocks, onDeleteBlock, colW }) {
-  const totalW = TIME_W + DAYS_ORDER.length * colW;
   return (
     <div className="timetable-grid">
-      <div className="grid-header" style={{ width: `${totalW}px` }}>
+      <div className="grid-header" style={{ width: "100%" }}>
         <div style={{ width: `${TIME_W}px`, flexShrink: 0 }} />
         {DAYS_ORDER.map((d) => (
           <div
             key={d}
             className="day-col"
             style={{
-              width: `${colW}px`,
-              flexShrink: 0,
+              flex: 1,
               color:
                 d === "SAT" ? "#4f9cf9" : d === "SUN" ? "#f94f4f" : undefined,
             }}
@@ -142,7 +140,7 @@ function TimetableGrid({ lectures, personalBlocks, onDeleteBlock, colW }) {
       </div>
       <div
         className="grid-body"
-        style={{ width: `${totalW}px`, height: `${HOURS.length * CELL_H}px` }}
+        style={{ width: "100%", height: `${HOURS.length * CELL_H}px` }}
       >
         <div
           style={{

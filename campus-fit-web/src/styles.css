@@ -117,6 +117,22 @@ body { background: var(--bg); line-height: 1.6; }
   font-weight: 600;
 }
 .sidebar-nav li a.active svg { opacity: 1; }
+.sidebar-nav li:nth-child(5) {
+  margin-top: 12px;
+  padding-top: 10px;
+  position: relative; /* 가상 요소의 기준점이 됩니다. */
+}
+
+/* 5번째 항목의 위에 80% 길이의 선을 추가 */
+.sidebar-nav li:nth-child(5)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10%;      
+  width: 80%;        
+  height: 1px;        
+  background-color: rgba(255,255,255,0.08); 
+}
 .sidebar-footer {
   padding: 16px 20px;
   border-top: 1px solid rgba(255,255,255,0.08);
@@ -203,7 +219,7 @@ body { background: var(--bg); line-height: 1.6; }
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 .auth-card h1 {
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: 800;
   color: var(--primary);
   margin-bottom: 4px;
@@ -215,7 +231,7 @@ body { background: var(--bg); line-height: 1.6; }
   margin-bottom: 28px;
   font-weight: 500;
 }
-.auth-card form { display: flex; flex-direction: column; gap: 16px; }
+.auth-card form { display: flex; flex-direction: column; gap: 12px; }
 .auth-card .btn-primary {
   width: 100%;
   padding: 12px 18px;
@@ -223,7 +239,7 @@ body { background: var(--bg); line-height: 1.6; }
   margin-top: 4px;
 }
 .auth-link {
-  margin-top: 20px;
+  margin-top: 8px;
   text-align: center;
   color: var(--muted);
   font-size: 0.88rem;
@@ -268,7 +284,7 @@ body { background: var(--bg); line-height: 1.6; }
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
 }
-.form-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.form-row { display: flex; margin-top: 6px; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label {
   font-size: 0.8rem;
@@ -360,6 +376,31 @@ input[type="color"] { height: 38px; width: 60px; padding: 3px 5px; cursor: point
   border-color: var(--primary);
 }
 
+.btn-primary-sm {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 70px;
+}
+.btn-primary-sm:hover:not(:disabled) {
+  background: var(--primary-hover);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  transform: translateY(-1px);
+}
+.btn-primary-sm:active:not(:disabled) { transform: translateY(0); }
+.btn-primary-sm:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .btn-secondary-sm {
   background: var(--primary-light);
   color: var(--primary);
@@ -370,8 +411,17 @@ input[type="color"] { height: 38px; width: 60px; padding: 3px 5px; cursor: point
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 70px;
 }
-.btn-secondary-sm:hover { border-color: var(--primary); }
+.btn-secondary-sm:hover {
+  background: #ddd6fe;
+  border-color: var(--primary);
+}
 
 .btn-danger {
   background: var(--danger);
@@ -568,9 +618,7 @@ input[type="color"] { height: 38px; width: 60px; padding: 3px 5px; cursor: point
   display: flex; 
   position: sticky; 
   top: 0; 
-  background: var(--card); 
   z-index: 5; 
-  border-bottom: 1px solid var(--border);
 }
 .day-col {
   text-align: center;
@@ -578,7 +626,8 @@ input[type="color"] { height: 38px; width: 60px; padding: 3px 5px; cursor: point
   font-size: 0.82rem;
   padding: 8px 0;
   color: var(--text-secondary);
-  flex: none;
+  flex: 1;
+  min-width: 0;
 }
 .grid-body {
   position: relative;
