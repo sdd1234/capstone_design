@@ -291,11 +291,13 @@ export default function TimetablePage() {
 
   // 선택된 학기(selectedSemester)에 해당하는 시간표들
   const [selYear, selTerm] = selectedSemester.split("-");
-  const inSemester = timetables.filter(
-    (t) =>
-      String(t.year) === String(selYear) &&
-      String(t.termSeason) === String(selTerm),
-  );
+  const inSemester = timetables
+    .filter(
+      (t) =>
+        String(t.year) === String(selYear) &&
+        String(t.termSeason) === String(selTerm),
+    )
+    .sort((a, b) => a.id - b.id); // 먼저 만든 시간표가 1페이지로
 
   // 현재 인덱스가 유효한지 확인하고, 유효하지 않으면 0으로 리셋
   useEffect(() => {
@@ -362,26 +364,28 @@ export default function TimetablePage() {
       <div className="page-header">
         <h2>시간표</h2>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <select
-            value={selectedSemester}
-            onChange={(e) => setSelectedSemester(e.target.value)}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 8,
-              border: "1.5px solid var(--primary)",
-              background: "white",
-              fontWeight: 600,
-              height: 40,
-              minWidth: 100,
-              cursor: "pointer",
-            }}
-          >
-            {semesterOptions.map((opt) => (
-              <option key={opt.key} value={opt.key}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+          {semesterOptions.length > 1 && (
+            <select
+              value={selectedSemester}
+              onChange={(e) => setSelectedSemester(e.target.value)}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 8,
+                border: "1.5px solid var(--primary)",
+                background: "white",
+                fontWeight: 600,
+                height: 40,
+                minWidth: 100,
+                cursor: "pointer",
+              }}
+            >
+              {semesterOptions.map((opt) => (
+                <option key={opt.key} value={opt.key}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             className="btn-primary"
             onClick={() => setShowForm((v) => !v)}
