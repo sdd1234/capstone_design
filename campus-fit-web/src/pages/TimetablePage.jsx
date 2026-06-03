@@ -191,6 +191,12 @@ export default function TimetablePage() {
     `${sem.year}-${sem.termSeason}`,
   );
 
+  // 현재 보고 있는 학기 (개인일정 생성·조회는 이 학기 기준)
+  const viewSem = {
+    year: Number(selectedSemester.split("-")[0]),
+    termSeason: selectedSemester.split("-")[1],
+  };
+
   const [showForm, setShowForm] = useState(false);
   const [blockForm, setBlockForm] = useState({
     title: "",
@@ -203,6 +209,12 @@ export default function TimetablePage() {
   useEffect(() => {
     loadAll();
   }, []);
+
+  // 보고 있는 학기가 바뀌면 개인일정 다시 로드
+  useEffect(() => {
+    reloadBlocks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSemester]);
 
   // 컨테이너 너비를 기반으로 COL_W 동적 계산
   useEffect(() => {
@@ -227,12 +239,8 @@ export default function TimetablePage() {
 
   const loadAll = async () => {
     try {
-      const [ttRes, pbRes] = await Promise.all([
-        listTimetables(),
-        listPersonalBlocks(sem.year, sem.termSeason),
-      ]);
+      const ttRes = await listTimetables();
       let fetched = ttRes.data.data || [];
-      setPersonalBlocks(pbRes.data.data || []);
 
       // 샘플 데이터 제거: 실제 저장된 timetables만 사용합니다.
 
@@ -251,7 +259,7 @@ export default function TimetablePage() {
 
   const reloadBlocks = async () => {
     try {
-      const res = await listPersonalBlocks(sem.year, sem.termSeason);
+      const res = await listPersonalBlocks(viewSem.year, viewSem.termSeason);
       setPersonalBlocks(res.data.data || []);
     } catch {
       /* ignore */
@@ -263,8 +271,8 @@ export default function TimetablePage() {
     setError("");
     try {
       await createPersonalBlock({
-        year: sem.year,
-        termSeason: sem.termSeason,
+        year: viewSem.year,
+        termSeason: viewSem.termSeason,
         title: blockForm.title.trim(),
         dayOfWeek: blockForm.dayOfWeek,
         startTime: blockForm.startTime,
