@@ -152,6 +152,19 @@ function MonthCalendar({
             >
               {d && (
                 <>
+                  <div
+                    className="cal-day-num"
+                    style={{
+                      color:
+                        i % 7 === 0
+                          ? "#e35a4a"
+                          : i % 7 === 6
+                            ? "#4a6fe3"
+                            : undefined,
+                    }}
+                  >
+                    {d}
+                  </div>
                   {totalLanes > 0 && (
                     <div
                       style={{
@@ -216,19 +229,7 @@ function MonthCalendar({
                       })}
                     </div>
                   )}
-                  <div
-                    className="cal-day-num"
-                    style={{
-                      color:
-                        i % 7 === 0
-                          ? "#e35a4a"
-                          : i % 7 === 6
-                            ? "#4a6fe3"
-                            : undefined,
-                    }}
-                  >
-                    {d}
-                  </div>
+
                   <div className="cal-dots">
                     {shown.map((s, si) =>
                       s.type === "event" ? (

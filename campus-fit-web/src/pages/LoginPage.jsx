@@ -50,7 +50,14 @@ export default function LoginPage({ onLogin }) {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 4,
+          }}
+        >
           <GraduationCap size={28} color="#6366f1" />
           <h1>Campus Fit</h1>
         </div>
@@ -84,6 +91,9 @@ export default function LoginPage({ onLogin }) {
             {!loading && <ArrowRight size={16} />}
           </button>
         </form>
+        <p className="auth-link">
+          계정이 없으신가요? <Link to="/signup">회원가입</Link>
+        </p>
         <button
           type="button"
           onClick={handleTestLogin}
@@ -97,7 +107,7 @@ export default function LoginPage({ onLogin }) {
             fontSize: "0.88rem",
             fontWeight: 600,
             marginTop: 16,
-            marginBottom: 16,
+            marginBottom: 2,
             color: "#4f46e5",
             display: "flex",
             alignItems: "center",
@@ -109,9 +119,6 @@ export default function LoginPage({ onLogin }) {
           <Zap size={15} />
           데모 로그인
         </button>
-        <p className="auth-link">
-          계정이 없으신가요? <Link to="/signup">회원가입</Link>
-        </p>
       </div>
     </div>
   );
