@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   listRecommendations,
   createRecommendation,
@@ -145,6 +146,114 @@ function MiniGrid({ lectures }) {
           }),
         )}
       </div>
+    </div>
+  );
+}
+
+function CourseHit({ l, picked, onToggle }) {
+  const [box, setBox] = useState(null);
+  const fmt = (t) => (t || "").slice(0, 5);
+  const schedules = l.schedules || [];
+  const showPreview = (e) => {
+    if (schedules.length === 0) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const PW = 260;
+    const PH = 350;
+    const left = Math.min(Math.max(8, r.left), window.innerWidth - PW - 8);
+    const top =
+      r.bottom + PH > window.innerHeight
+        ? Math.max(8, r.top - PH - 4)
+        : r.bottom + 4;
+    setBox({ top, left, width: PW });
+  };
+  return (
+    <div
+      onMouseEnter={showPreview}
+      onMouseLeave={() => setBox(null)}
+      style={{
+        padding: "5px 8px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 8,
+        borderBottom: "1px solid var(--border)",
+      }}
+    >
+      <span style={{ fontSize: "0.82rem", minWidth: 0 }}>
+        <strong>{l.courseName}</strong> · {l.professor}
+        {l.dept ? ` (${l.dept})` : ""} · {l.credits}학점
+        {l.category && (
+          <span
+            style={{
+              fontSize: "0.7rem",
+              color: "var(--muted)",
+              marginLeft: 6,
+            }}
+          >
+            [{l.category}]
+          </span>
+        )}
+        {schedules.length > 0 && (
+          <span
+            style={{
+              display: "inline-flex",
+              flexWrap: "wrap",
+              gap: 4,
+              marginLeft: 6,
+              verticalAlign: "middle",
+            }}
+          >
+            {schedules.map((s, i) => (
+              <span
+                key={i}
+                style={{
+                  fontSize: "0.68rem",
+                  background: "#eef2ff",
+                  color: "#4338ca",
+                  borderRadius: 4,
+                  padding: "1px 5px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {DAY_LABELS[s.dayOfWeek]} {fmt(s.startTime)}~{fmt(s.endTime)}
+              </span>
+            ))}
+          </span>
+        )}
+      </span>
+      <button
+        type="button"
+        className={picked ? "btn-secondary-sm" : "btn-primary-sm"}
+        onClick={() => onToggle(l.id)}
+        style={{ flexShrink: 0 }}
+      >
+        {picked ? "해제" : "추가"}
+      </button>
+      {box &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              top: box.top,
+              left: box.left,
+              width: box.width,
+              zIndex: 1000,
+              background: "white",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
+              padding: 8,
+            }}
+          >
+            <div
+              style={{ fontSize: "0.74rem", fontWeight: 700, marginBottom: 4 }}
+            >
+              {l.courseName} 미리보기
+            </div>
+            <MiniGrid lectures={[l]} />
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
@@ -592,46 +701,14 @@ export default function AiRecommendationPage() {
                   borderRadius: 4,
                 }}
               >
-                {courseHits.map((l) => {
-                  const picked = refine.preferredLectureIds.includes(l.id);
-                  return (
-                    <div
-                      key={l.id}
-                      style={{
-                        padding: "4px 8px",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        borderBottom: "1px solid var(--border)",
-                      }}
-                    >
-                      <span style={{ fontSize: "0.82rem" }}>
-                        <strong>{l.courseName}</strong> · {l.professor} ·{" "}
-                        {l.credits}학점
-                        {l.category && (
-                          <span
-                            style={{
-                              fontSize: "0.7rem",
-                              color: "var(--muted)",
-                              marginLeft: 6,
-                            }}
-                          >
-                            [{l.category}]
-                          </span>
-                        )}
-                      </span>
-                      <button
-                        type="button"
-                        className={
-                          picked ? "btn-secondary-sm" : "btn-primary-sm"
-                        }
-                        onClick={() => togglePreferred(l.id)}
-                      >
-                        {picked ? "해제" : "추가"}
-                      </button>
-                    </div>
-                  );
-                })}
+                {courseHits.map((l) => (
+                  <CourseHit
+                    key={l.id}
+                    l={l}
+                    picked={refine.preferredLectureIds.includes(l.id)}
+                    onToggle={togglePreferred}
+                  />
+                ))}
               </div>
             )}
             {refine.preferredLectureIds.length > 0 && (
@@ -946,46 +1023,14 @@ export default function AiRecommendationPage() {
                     borderRadius: 4,
                   }}
                 >
-                  {courseHits.map((l) => {
-                    const picked = refine.preferredLectureIds.includes(l.id);
-                    return (
-                      <div
-                        key={l.id}
-                        style={{
-                          padding: "4px 8px",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          borderBottom: "1px solid var(--border)",
-                        }}
-                      >
-                        <span style={{ fontSize: "0.82rem" }}>
-                          <strong>{l.courseName}</strong> · {l.professor} ·{" "}
-                          {l.credits}학점
-                          {l.category && (
-                            <span
-                              style={{
-                                fontSize: "0.7rem",
-                                color: "var(--muted)",
-                                marginLeft: 6,
-                              }}
-                            >
-                              [{l.category}]
-                            </span>
-                          )}
-                        </span>
-                        <button
-                          type="button"
-                          className={
-                            picked ? "btn-secondary-sm" : "btn-primary-sm"
-                          }
-                          onClick={() => togglePreferred(l.id)}
-                        >
-                          {picked ? "해제" : "추가"}
-                        </button>
-                      </div>
-                    );
-                  })}
+                  {courseHits.map((l) => (
+                    <CourseHit
+                      key={l.id}
+                      l={l}
+                      picked={refine.preferredLectureIds.includes(l.id)}
+                      onToggle={togglePreferred}
+                    />
+                  ))}
                 </div>
               )}
               {refine.preferredLectureIds.length > 0 && (
@@ -1150,39 +1195,14 @@ export default function AiRecommendationPage() {
                             borderRadius: 4,
                           }}
                         >
-                          {courseHits.map((l) => {
-                            const picked = refine.preferredLectureIds.includes(
-                              l.id,
-                            );
-                            return (
-                              <div
-                                key={l.id}
-                                style={{
-                                  padding: "4px 8px",
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  alignItems: "center",
-                                  borderBottom: "1px solid var(--border)",
-                                }}
-                              >
-                                <span style={{ fontSize: "0.82rem" }}>
-                                  <strong>{l.courseName}</strong> ·{" "}
-                                  {l.professor} · {l.credits}학점
-                                </span>
-                                <button
-                                  type="button"
-                                  className={
-                                    picked
-                                      ? "btn-secondary-sm"
-                                      : "btn-primary-sm"
-                                  }
-                                  onClick={() => togglePreferred(l.id)}
-                                >
-                                  {picked ? "해제" : "추가"}
-                                </button>
-                              </div>
-                            );
-                          })}
+                          {courseHits.map((l) => (
+                            <CourseHit
+                              key={l.id}
+                              l={l}
+                              picked={refine.preferredLectureIds.includes(l.id)}
+                              onToggle={togglePreferred}
+                            />
+                          ))}
                         </div>
                       )}
                       {refine.preferredLectureIds.length > 0 && (
