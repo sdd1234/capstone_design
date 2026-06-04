@@ -518,7 +518,7 @@ export default function TimeManagementPage() {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 16 }}>
+      <div className="tm-split" style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 16 }}>
         {/* 좌: 자연어 입력 + 활동 리스트 */}
         <div className="card">
           <h3>활동 목표 추가</h3>

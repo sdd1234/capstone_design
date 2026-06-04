@@ -1,0 +1,24 @@
+# Node dependencies
+node_modules/
+
+# Frontend build output
+campus-fit-web/dist/
+
+# Java build output
+target/
+*.class
+
+# .NET build output (stray test project)
+/bin/
+/obj/
+**/bin/Debug/
+**/obj/Debug/
+
+# Logs / runtime
+logs/
+*.log
+*.pid
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
