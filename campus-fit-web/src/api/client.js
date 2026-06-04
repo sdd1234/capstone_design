@@ -210,7 +210,9 @@ apiClient.interceptors.response.use(
     const isRefreshCall =
       original._skipAuthRefresh || original.url?.includes("/api/v1/auth/refresh");
 
-    if (status === 401 && !original._retry && !isRefreshCall) {
+    // 이 백엔드(Spring Security)는 만료/무효 토큰에 401이 아니라 403을 반환한다.
+    // → 403도 401처럼 한 번 refresh 시도 (재시도 후에도 실패면 그대로 진행)
+    if ((status === 401 || status === 403) && !original._retry && !isRefreshCall) {
       original._retry = true;
       try {
         if (!refreshPromise) refreshPromise = performRefresh();

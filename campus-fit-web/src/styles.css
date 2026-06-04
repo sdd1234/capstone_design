@@ -4,7 +4,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  font-family: 'Inter', 'Noto Sans KR', system-ui, sans-serif;
+  font-family: 'Pretendard', 'Inter', 'Noto Sans KR', system-ui, sans-serif;
   --primary: #6366f1;
   --primary-hover: #4f46e5;
   --primary-light: #eef2ff;
@@ -29,11 +29,22 @@
   --radius-lg: 16px;
   --radius-xl: 20px;
   --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* design tokens (Campus Fit 디자인 시안) — 톤/헤어라인 계열 */
+  --surface: #ffffff;
+  --surface-2: #f0f1f5;
+  --hairline: #eeeef3;
+  --hairline-2: #dcdce5;
+  --text-2: #5c5c6e;
+  --text-3: #9c9cad;
+  --primary-weak: #ECEBFD; /* 시안 포인트 약한 배경 (≈ --primary-light) */
+  --page-bg: #E7E8EE;      /* 폰 프레임 뒤 캔버스 */
   font-size: 14px;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
 body { background: var(--bg); line-height: 1.6; }
+/* 버튼/입력은 기본적으로 페이지 폰트를 상속하지 않음 → 강제 상속 (한글 폰트 적용) */
+button, input, select, textarea { font-family: inherit; }
 
 /* ─── Loading ─────────────────────────────────────────────────── */
 .loading {
@@ -624,49 +635,94 @@ input[type="color"] { height: 38px; width: 60px; padding: 3px 5px; cursor: point
   text-align: center;
   font-weight: 700;
   font-size: 0.82rem;
-  padding: 8px 0;
-  color: var(--text-secondary);
+  letter-spacing: -0.01em;
+  padding: 10px 0 9px;
+  color: var(--text-2);
   flex: 1;
   min-width: 0;
 }
 .grid-body {
   position: relative;
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid var(--hairline-2);
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: var(--shadow-card);
 }
-.hour-row { position: absolute; width: 100%; border-top: 1px solid #f1f5f9; }
+.hour-row { position: absolute; width: 100%; border-top: 1px solid var(--hairline); }
 .hour-label {
   position: absolute;
   left: 4px;
   top: 3px;
   font-size: 0.72rem;
-  color: var(--muted);
+  color: var(--text-3);
   width: 52px;
   text-align: right;
-  font-weight: 500;
+  font-weight: 600;
   z-index: 2;
 }
 .lecture-block {
   position: absolute;
-  border-radius: 8px;
-  padding: 5px 7px;
+  border-radius: 7px;
+  padding: 4px 6px;
   overflow: hidden;
-  color: #fff;
-  font-size: 0.75rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  cursor: default;
+  color: var(--text-2);
+  font-size: 0.66rem;
+  display: flex;
+  align-items: center; /* 이름만 있으니 세로 가운데 */
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  cursor: pointer; /* 클릭하면 상세 팝업 */
 }
 .lecture-block:hover {
-  transform: scale(1.03);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  box-shadow: var(--shadow-md);
   z-index: 10;
 }
-.lec-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lec-room { font-size: 0.7rem; opacity: 0.85; font-weight: 500; }
+.lecture-block:active { transform: scale(0.97); }
+/* 과목명만 표시 — 한글 단어는 유지, 길면 3줄까지 후 … */
+.lec-name {
+  width: 100%;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.18;
+  font-size: 0.66rem;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  word-break: keep-all;
+}
+
+/* ─── 개인일정 요일 다중 선택 칩 ──────────────────────────── */
+.day-chip {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid var(--hairline-2, #dcdce5);
+  background: var(--surface, #fff);
+  color: var(--text-2, #5c5c6e);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.day-chip.on {
+  background: var(--primary, #6c63f0);
+  border-color: var(--primary, #6c63f0);
+  color: #fff;
+}
+.btn-day-quick {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--hairline-2, #dcdce5);
+  background: var(--surface-2, #f0f1f5);
+  color: var(--text-2, #5c5c6e);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-day-quick:active {
+  transform: scale(0.96);
+}
 
 /* ─── Slider Navigation ──────────────────────────────────────── */
 .btn-slider-nav:hover {
@@ -1075,6 +1131,81 @@ pre {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+/* ════════════════════════════════════════════════════════════════
+   폰 목업 셸 (디자인 시안 — 아이폰 프레임 + 하단탭 + 모바일 화면)
+   ▸ 폰은 데스크톱 뷰포트 안 고정 402px 박스라 @media 미사용.
+   ▸ 모든 모바일 오버라이드는 .phone-scroll 하위로 스코핑.
+   ════════════════════════════════════════════════════════════════ */
+.phone-stage {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--page-bg);
+  overflow: hidden;
+}
+
+/* 단일 스크롤러 — 상단은 상태바 여백 확보 */
+.phone-scroll { padding-top: 46px; }
+.cf-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.cf-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+
+/* ── 페이지 컨테이너: 데스크톱 여백/최대폭 제거 ───────────────── */
+.phone-scroll .page-container,
+.phone-scroll .content { padding: 6px 14px 18px; max-width: none; overflow-x: hidden; }
+
+/* ── 페이지 헤더: 큰 타이틀, 액션은 줄바꿈 ─────────────────────── */
+.phone-scroll .page-header { flex-wrap: wrap; gap: 10px; margin-bottom: 14px; align-items: center; }
+.phone-scroll .page-header h2 { font-size: 1.55rem; font-weight: 800; letter-spacing: -0.02em; }
+.phone-scroll .page-header h3 { font-size: 1.05rem; }
+
+/* ── 카드: 모바일 라운드/여백 ──────────────────────────────────── */
+.phone-scroll .card { padding: 14px; border-radius: 16px; box-shadow: var(--shadow-sm); }
+
+/* ── 2단 레이아웃 → 세로 스택 ──────────────────────────────────── */
+.phone-scroll .split-layout { flex-direction: column; gap: 14px; }
+.phone-scroll .list-panel,
+.phone-scroll .detail-panel { width: 100% !important; min-width: 0 !important; flex: none !important; }
+
+/* ── 폼: 좁은 화면에서 세로로 ──────────────────────────────────── */
+.phone-scroll form { flex-wrap: wrap; }
+.phone-scroll .field { flex: 1 1 100% !important; min-width: 0; }
+.phone-scroll input,
+.phone-scroll select,
+.phone-scroll textarea { width: 100%; box-sizing: border-box; max-width: 100%; }
+
+/* ── 버튼: 탭하기 좋은 크기 ────────────────────────────────────── */
+.phone-scroll .btn-primary,
+.phone-scroll .btn-primary-sm { border-radius: 12px; }
+
+/* ── 가로로 넘치는 그리드/표 가로 스크롤 허용 ──────────────────── */
+.phone-scroll .timetable-grid { overflow-x: auto; }
+
+/* ── 버튼 줄: 헤더의 select+버튼이 좁을 때 줄바꿈 ──────────────── */
+.phone-scroll .page-header > div { flex-wrap: wrap; }
+.phone-scroll .tab-group { flex-wrap: wrap; }
+
+/* ── 시간관리: 활동추가|주간그리드 2단 인라인 grid → 세로 스택 ── */
+.phone-scroll .tm-split { grid-template-columns: 1fr !important; }
+/* grid/flex 자식 min-width:auto 폭발 방지 — 카드가 7열 그리드 폭만큼 부풀어
+   화면 밖으로 넘치고 제목까지 밀리던 것. 자식을 컨테이너 폭에 가두고
+   주간 그리드는 자체 overflow-x:auto로 내부 스크롤. */
+.phone-scroll .tm-split > * { min-width: 0; }
+.phone-scroll .card { min-width: 0; max-width: 100%; }
+
+/* ── 캘린더: 날짜 클릭 시 사이드패널이 달력 찌부 → 세로 스택 ──── */
+.phone-scroll .cal-layout { flex-direction: column; gap: 12px; align-items: stretch; }
+/* 일정 없는 달(학사일정 미로드 등)에 그리드가 내용너비로 쭈그러드는 것 방지 → 항상 꽉 채움 */
+.phone-scroll .month-calendar { width: 100%; }
+.phone-scroll .day-panel { width: 100% !important; min-width: 0 !important; }
+.phone-scroll .cal-nav { flex-wrap: wrap; row-gap: 8px; }
+.phone-scroll .cal-grid,
+.phone-scroll .cal-dow-header { font-size: 0.78rem; }
+
+/* ── 모달: 폰 프레임 안에만 뜨도록 (데스크톱 전체 덮지 않게) ──── */
+.phone-stage .modal-overlay { position: absolute; padding: 16px; z-index: 90; }
+.phone-stage .modal { max-width: 100%; width: 100%; max-height: 80%; overflow-y: auto; padding: 20px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 /* ─── Selection ──────────────────────────────── */

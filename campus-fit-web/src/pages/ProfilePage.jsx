@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useOutletContext } from "react-router-dom";
 import { getMe, updateMe, changePassword } from "../api/user";
 import {
   listTimetables,
@@ -12,6 +13,7 @@ import { getCurrentSemester, TERM_LABELS } from "../utils/semester";
 const DAY_LABELS = { MON: "월", TUE: "화", WED: "수", THU: "목", FRI: "금", SAT: "토", SUN: "일" };
 
 export default function ProfilePage({ onUserUpdate }) {
+  const { onLogout } = useOutletContext() || {};
   const [profile, setProfile] = useState(null);
   const [form, setForm] = useState({ name: "", marketingAgree: false });
   const [pwForm, setPwForm] = useState({
@@ -402,6 +404,16 @@ export default function ProfilePage({ onUserUpdate }) {
             </div>
           </form>
         </div>
+      )}
+
+      {onLogout && (
+        <button
+          onClick={onLogout}
+          className="btn-danger-sm"
+          style={{ marginTop: 18, width: "100%", padding: "12px 0", borderRadius: 12, fontSize: "0.95rem", fontWeight: 700 }}
+        >
+          로그아웃
+        </button>
       )}
     </div>
   );
